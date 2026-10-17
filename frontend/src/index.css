@@ -1,0 +1,92 @@
+@import "tailwindcss";
+
+@theme {
+  /* Brand palette direct tokens */
+  --color-primary-purple: #6D28D9;
+  --color-dark-purple: #5B21B6;
+  --color-medium-purple: #8B5CF6;
+  --color-light-purple: #A78BFA;
+  --color-light-lavender: #F5F3FF;
+  --color-soft-purple: #EDE9FE;
+  --color-primary-text: #27213B;
+  --color-secondary-text: #6B647A;
+  --color-border-purple: #E9E3F5;
+  --color-ring-purple: #DDD6FE;
+
+  /* shadcn/ui semantic tokens */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+}
+
+:root {
+  /* Main page background: #FAF9FF */
+  --background: #FAF9FF;
+
+  /* Primary text: #27213B */
+  --foreground: #27213B;
+
+  /* Card surfaces: pure white #FFFFFF with primary text #27213B */
+  --card: #FFFFFF;
+  --card-foreground: #27213B;
+
+  /* Popover surfaces: pure white #FFFFFF */
+  --popover: #FFFFFF;
+  --popover-foreground: #27213B;
+
+  /* Primary purple #6D28D9 with white text */
+  --primary: #6D28D9;
+  --primary-foreground: #FFFFFF;
+
+  /* Secondary: Light lavender #F5F3FF with Dark purple #5B21B6 text */
+  --secondary: #F5F3FF;
+  --secondary-foreground: #5B21B6;
+
+  /* Muted surfaces: Light lavender #F5F3FF with Secondary text #6B647A */
+  --muted: #F5F3FF;
+  --muted-foreground: #6B647A;
+
+  /* Accent: Soft purple #EDE9FE with Dark purple #5B21B6 text */
+  --accent: #EDE9FE;
+  --accent-foreground: #5B21B6;
+
+  /* Destructive/Alert: Deep purple treatment #5B21B6 with white text */
+  --destructive: #5B21B6;
+  --destructive-foreground: #FFFFFF;
+
+  /* Borders: #E9E3F5 */
+  --border: #E9E3F5;
+  --input: #E9E3F5;
+
+  /* Focus ring: #DDD6FE */
+  --ring: #DDD6FE;
+
+  --radius: 0.5rem;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  background-color: var(--background);
+  color: var(--foreground);
+}
