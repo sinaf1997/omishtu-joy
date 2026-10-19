@@ -67,3 +67,27 @@ export interface CreateStaffResponse {
   staff: StaffMemberRecord;
   temporaryPassword: string;
 }
+
+export interface StaffStats {
+  totalStaff: number;
+  activeStaff: number;
+  inactiveStaff: number;
+  totalRoles: number;
+}
+
+export interface RoleRecord {
+  id: string;
+  name: StaffRole;
+  display_name: string;
+  description: string | null;
+}
+
+export interface UpdateStaffPayload {
+  role?: StaffRole;
+  isActive?: boolean;
+}
+
+export interface ResetPasswordResponse {
+  temporaryPassword: string;
+  staff: StaffMemberRecord;
+}

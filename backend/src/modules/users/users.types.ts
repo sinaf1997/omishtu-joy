@@ -69,3 +69,10 @@ export interface CreateStaffData {
   mustResetPassword?: boolean;
   isActive?: boolean;
 }
+
+export interface StaffStats {
+  totalStaff: number;
+  activeStaff: number;
+  inactiveStaff: number;
+  totalRoles: number;
+}

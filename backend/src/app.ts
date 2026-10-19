@@ -41,6 +41,7 @@ export function createApp(): Express {
   app.use('/api/health', healthRouter);
   app.use('/api/auth', authRouter);
   app.use('/api/users', usersRouter);
+  app.use('/api/roles', usersRouter);
 
   // 404 Handler
   app.use(notFoundHandler);

@@ -1,5 +1,6 @@
 -- ==============================================================================
 -- Migration: 002_seed_roles_permissions.sql
+-- Sprint: S1
 -- Description: Seed the 6 Core Staff Roles and Granular Module Permissions
 -- ==============================================================================
 

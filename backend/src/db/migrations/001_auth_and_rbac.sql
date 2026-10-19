@@ -1,5 +1,6 @@
 -- ==============================================================================
 -- Migration: 001_auth_and_rbac.sql
+-- Sprint: S1
 -- Description: Core Authentication, Staff Identities, Students, and RBAC Architecture
 -- ==============================================================================
 

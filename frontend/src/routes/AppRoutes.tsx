@@ -21,6 +21,7 @@ import { StudentLoginPage } from '../pages/auth/StudentLoginPage.js';
 import { ChangePasswordPage } from '../pages/auth/ChangePasswordPage.js';
 import { ForbiddenPage } from '../pages/ForbiddenPage.js';
 import { NotFoundPage } from '../pages/NotFoundPage.js';
+import { ComingSoonPage } from '../pages/ComingSoonPage.js';
 
 // Staff Dashboards
 import { OwnerDashboard } from '../pages/staff/OwnerDashboard.js';
@@ -95,6 +96,23 @@ export const AppRoutes: React.FC = () => {
             <Route element={<RoleRoute allowedRoles={['owner', 'manager', 'academic_admin', 'receptionist']} />}>
               <Route path="reception" element={<ReceptionDashboard />} />
             </Route>
+
+            {/* Shared Coming Soon Routes for Planned Sprints */}
+            <Route path="students" element={<ComingSoonPage />} />
+            <Route path="documents" element={<ComingSoonPage />} />
+            <Route path="courses" element={<ComingSoonPage />} />
+            <Route path="enrollments" element={<ComingSoonPage />} />
+            <Route path="attendance" element={<ComingSoonPage />} />
+            <Route path="grading" element={<ComingSoonPage />} />
+            <Route path="certificates" element={<ComingSoonPage />} />
+            <Route path="fees" element={<ComingSoonPage />} />
+            <Route path="receivables" element={<ComingSoonPage />} />
+            <Route path="payables" element={<ComingSoonPage />} />
+            <Route path="ledger" element={<ComingSoonPage />} />
+            <Route path="reconciliation" element={<ComingSoonPage />} />
+            <Route path="tax-budgets" element={<ComingSoonPage />} />
+            <Route path="audit-log" element={<ComingSoonPage />} />
+            <Route path="analytics" element={<ComingSoonPage />} />
           </Route>
         </Route>
 

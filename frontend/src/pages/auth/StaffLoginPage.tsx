@@ -50,12 +50,7 @@ export const StaffLoginPage: React.FC = () => {
     try {
       const user = await loginStaff({ email: cleanEmail, password });
 
-      if (user.mustResetPassword) {
-        navigate('/change-password', { replace: true });
-        return;
-      }
-
-      // Check for redirected path from route guard or route by role
+      // Route directly to intended staff path or role dashboard (security banner displays if mustResetPassword)
       const intendedPath = (location.state as { from?: { pathname: string } })?.from?.pathname;
       if (intendedPath && intendedPath.startsWith('/staff')) {
         navigate(intendedPath, { replace: true });

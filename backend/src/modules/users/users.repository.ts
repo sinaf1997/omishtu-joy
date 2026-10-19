@@ -5,6 +5,7 @@ import {
   StudentRecord,
   RoleRecord,
   CreateStaffData,
+  StaffStats,
 } from './users.types.js';
 
 export class UsersRepository {
@@ -204,6 +205,42 @@ export class UsersRepository {
     await pool.query<ResultSetHeader>(
       `UPDATE students SET last_login_at = CURRENT_TIMESTAMP WHERE id = ?`,
       [id]
+    );
+  }
+
+  async getStaffStats(): Promise<StaffStats> {
+    const pool = getDatabasePool();
+    const [staffRows] = await pool.query<(RowDataPacket & { total: number; active: number; inactive: number })[]>(
+      `SELECT
+         COUNT(*) AS total,
+         SUM(CASE WHEN is_active = 1 THEN 1 ELSE 0 END) AS active,
+         SUM(CASE WHEN is_active = 0 THEN 1 ELSE 0 END) AS inactive
+       FROM staff`
+    );
+    const [roleRows] = await pool.query<(RowDataPacket & { total: number })[]>(
+      `SELECT COUNT(*) AS total FROM roles`
+    );
+
+    const staffCounts = staffRows[0] || { total: 0, active: 0, inactive: 0 };
+    const roleCounts = roleRows[0] || { total: 0 };
+
+    return {
+      totalStaff: Number(staffCounts.total) || 0,
+      activeStaff: Number(staffCounts.active) || 0,
+      inactiveStaff: Number(staffCounts.inactive) || 0,
+      totalRoles: Number(roleCounts.total) || 0,
+    };
+  }
+
+  async resetStaffPassword(id: string, passwordHash: string): Promise<void> {
+    const pool = getDatabasePool();
+    await pool.query<ResultSetHeader>(
+      `UPDATE staff
+       SET password_hash = ?,
+           must_reset_password = 1,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = ?`,
+      [passwordHash, id]
     );
   }
 }

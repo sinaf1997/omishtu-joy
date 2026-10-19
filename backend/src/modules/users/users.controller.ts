@@ -3,8 +3,7 @@ import { usersService } from './users.service.js';
 import { sendSuccess, sendError } from '../../utils/api-response.js';
 import {
   CreateStaffInput,
-  UpdateStaffRoleInput,
-  UpdateStaffStatusInput,
+  UpdateStaffInput,
 } from './users.schema.js';
 
 export async function listStaff(_req: Request, res: Response): Promise<void> {
@@ -13,6 +12,16 @@ export async function listStaff(_req: Request, res: Response): Promise<void> {
     sendSuccess(res, staffList);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Failed to list staff accounts';
+    sendError(res, message, 500, 'INTERNAL_SERVER_ERROR');
+  }
+}
+
+export async function getStaffStats(_req: Request, res: Response): Promise<void> {
+  try {
+    const stats = await usersService.getStaffStats();
+    sendSuccess(res, stats);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Failed to retrieve staff stats';
     sendError(res, message, 500, 'INTERNAL_SERVER_ERROR');
   }
 }
@@ -38,33 +47,36 @@ export async function createStaff(req: Request, res: Response): Promise<void> {
   }
 }
 
-export async function updateStaffRole(req: Request, res: Response): Promise<void> {
+export async function updateStaff(req: Request, res: Response): Promise<void> {
   const { id } = req.params;
-  const { role } = req.body as UpdateStaffRoleInput;
+  const updates = req.body as UpdateStaffInput;
+  const requestingOwnerId = req.user?.id || '';
 
   try {
-    const updatedStaff = await usersService.updateStaffRole(id, role);
+    const updatedStaff = await usersService.updateStaff(id, requestingOwnerId, updates);
     sendSuccess(res, updatedStaff);
   } catch (err: unknown) {
     const errorWithStatus = err as { statusCode?: number; code?: string; message?: string };
     const statusCode = errorWithStatus.statusCode || 500;
     const errorCode = errorWithStatus.code || 'STAFF_UPDATE_ERROR';
-    sendError(res, errorWithStatus.message || 'Failed to update staff role', statusCode, errorCode);
+    sendError(res, errorWithStatus.message || 'Failed to update staff member', statusCode, errorCode);
   }
 }
 
-export async function updateStaffStatus(req: Request, res: Response): Promise<void> {
+export async function resetStaffPassword(req: Request, res: Response): Promise<void> {
   const { id } = req.params;
-  const { isActive } = req.body as UpdateStaffStatusInput;
 
   try {
-    const updatedStaff = await usersService.updateStaffStatus(id, isActive);
-    sendSuccess(res, updatedStaff);
+    const result = await usersService.resetStaffPassword(id);
+    sendSuccess(res, {
+      temporaryPassword: result.temporaryPassword,
+      staff: result.staff,
+    });
   } catch (err: unknown) {
     const errorWithStatus = err as { statusCode?: number; code?: string; message?: string };
     const statusCode = errorWithStatus.statusCode || 500;
-    const errorCode = errorWithStatus.code || 'STAFF_STATUS_ERROR';
-    sendError(res, errorWithStatus.message || 'Failed to update staff status', statusCode, errorCode);
+    const errorCode = errorWithStatus.code || 'PASSWORD_RESET_ERROR';
+    sendError(res, errorWithStatus.message || 'Failed to reset staff password', statusCode, errorCode);
   }
 }
 

@@ -346,20 +346,15 @@ Database is already up to date. No pending migrations.
 
 ### Migration File List
 
-The following schema migrations are currently present in the codebase:
+The following schema migrations are currently active in `backend/src/db/migrations/`:
 
-| Migration File | Primary Tables / Changes | Purpose |
-|---|---|---|
-| `001_auth_and_rbac.sql` | `roles`, `permissions`, `role_permissions`, `staff`, `students` | Core authentication, staff identities across 6 roles, student code identities, and RBAC infrastructure. |
-| `002_seed_roles_permissions.sql` | Seeds `roles` (the 6 staff roles), `permissions`, `role_permissions` | Populates the 6 standard training center staff roles and granular module permissions with ON DUPLICATE KEY UPDATE. |
-| `003_student_profiles_and_documents.sql` | `students`, `student_emergency_contacts`, `student_documents` | In-person student registration, identity details, emergency contacts, and document attachments. |
-| `004_courses_and_enrollments.sql` | `course_categories`, `courses`, `classrooms`, `cohorts`, `enrollments` | Course offerings, classroom allocation, cohort timetables, and student enrollments. |
-| `005_attendance_and_grading.sql` | `cohort_sessions`, `attendance_records`, `course_assessments`, `assessment_grades`, `certificates` | Daily attendance tracking, assessment scores, and QR-verifiable certificate issuance. |
-| `006_fees_and_payments.sql` | `student_invoices`, `invoice_items`, `fee_installments`, `payments` | Tuition fee schedules, installment tracking, cash/POS cashiering, and automated receipts. |
-| `007_vendors_and_payables.sql` | `vendors`, `vendor_bills`, `vendor_payments`, `trainer_payouts` | Supplier bills, accounts payable, payment vouchers, and trainer remuneration disbursements. |
-| `008_ledger_and_reconciliation.sql` | `chart_of_accounts`, `journal_entries`, `journal_items`, `bank_accounts`, `bank_transactions`, `bank_reconciliations` | Double-entry general ledger, chart of accounts, and bank statement reconciliations. |
-| `009_tax_budgets_and_audit.sql` | `tax_rates`, `departmental_budgets`, `audit_logs` | Withholding tax rules, departmental budget allocations, and immutable activity audit trail. |
-| `010_lms_sync.sql` | `lms_configs`, `lms_sync_logs`, `analytics_snapshots` | External LMS data synchronization and periodic executive analytics snapshots. |
+| Migration File | Sprint | Primary Tables / Changes | Purpose |
+|---|---|---|---|
+| `001_auth_and_rbac.sql` | S1 | `roles`, `permissions`, `role_permissions`, `staff`, `students` | Core authentication, staff identities across 6 roles, student code identities, and RBAC infrastructure. |
+| `002_seed_roles_permissions.sql` | S1 | Seeds `roles` (the 6 staff roles), `permissions`, `role_permissions` | Populates the 6 standard training center staff roles and granular module permissions with ON DUPLICATE KEY UPDATE. |
+
+*Note: Migration specifications for future sprints (003 through 010) are organized in `backend/src/db/migrations_drafts/` and will be migrated as each respective sprint is implemented.*
+
 
 ### Adding a New Migration
 
@@ -431,6 +426,8 @@ feature/sN-short-name       feature/sN-short-name
 
 | Date | Change | Who Needs to Act |
 |---|---|---|
+| **2026-10-19** | **Sprint 1 Database Migration & Seeding Stabilization**: Resolved `ER_NO_SUCH_TABLE: Table 'omishtu.staff' doesn't exist` root cause. Overhauled `migrate.ts` with statement-by-statement parsing (`splitSqlStatements`), fail-loud diagnostics reporting failing statement and file, and automatic recovery if `_migrations` contains stale entries while tables are missing. Synchronized `001_auth_and_rbac.sql` and `002_seed_roles_permissions.sql` as whole, clean migration files. Enhanced `seed.ts` to guarantee prerequisite migration execution before seeding and dynamically resolve foreign key role mappings. All 31 test suites verified passing. | Backend / Database / All |
+| **2026-10-19** | **Sprint 1 (Phase 2) Completed**: Owner Seeding, Dashboard Shell & Staff Provisioning. Seeded dev owner (`owner@gmail.com`) with `SEED_OWNER_EMAIL` / `SEED_OWNER_PASSWORD` env overrides; built owner dashboard shell with 4 live stat cards, recent staff table, topbar search, and non-blocking security banner; implemented unified `navigation.ts` config filtered by role with `ComingSoonPage` fallbacks; delivered complete Users & Roles management (`/staff/owner/users`) with single-use temporary password issuance, password reset, role updates, and self-deactivation protection. | All / Backend / Frontend |
 | **2026-10-19** | **Sprint 1 Completed**: Foundation, Security & Authentication. Delivered two completely separated portals (Staff & Student), 6 staff roles (`owner`, `receptionist`, `academic_admin`, `trainer`, `accountant`, `manager`), owner-only staff provisioning with single-use temporary password generation, forced password reset flow (`/change-password`), rate-limited login endpoints, production-safe migrations (`001_auth_and_rbac.sql` & `002_seed_roles_permissions.sql`), role and portal route guards, and modern purple & white landing page. | All / Backend / Frontend |
 | **2026-10-17** | Added complete 10-migration suite (`001_auth_and_rbac.sql` through `010_lms_sync.sql`) covering RBAC, student intake, courses, attendance, cashiering, payables, ledger, compliance, and LMS sync. Updated migration scripts to `npm run migrate` and `npm run seed`. | Backend / Database Architects / All |
 | **2026-10-17** | Initial project initialization: Full-stack monorepo foundation with React 19, Tailwind CSS 4, Express API, MySQL 8 migration runner, JWT authentication, and baseline technical README. | All developers / Team |

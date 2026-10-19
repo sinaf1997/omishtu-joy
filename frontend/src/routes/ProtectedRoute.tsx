@@ -23,8 +23,8 @@ export const ProtectedRoute: React.FC = () => {
     return <Navigate to={redirectPath} state={{ from: location }} replace />;
   }
 
-  // Force password reset if flagged
-  if (user?.mustResetPassword && location.pathname !== '/change-password') {
+  // Force password reset only for student portal; staff use non-blocking security banner
+  if (user?.portal === 'student' && user?.mustResetPassword && location.pathname !== '/change-password') {
     return <Navigate to="/change-password" replace />;
   }
 
