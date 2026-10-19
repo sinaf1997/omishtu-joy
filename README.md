@@ -189,7 +189,7 @@ omishtu/
 
 | Sprint | Phase | Target Timeline | Functional Focus | Implementation Status |
 |---|---|---|---|---|
-| **S1** | Foundation & Security | Weeks 1–2 | Monorepo structure, Express API, React 19 SPA, Tailwind 4, JWT auth, RBAC guards, MySQL migration runner | **In progress** (Technical foundation complete; staff roles expansion active) |
+| **S1** | Foundation & Security | Weeks 1–2 | Monorepo structure, Express API, React 19 SPA, Tailwind 4, JWT auth, RBAC guards, MySQL migration runner | **Done** (Dual separated portals, 6 staff roles, student auth, owner staff provisioning, forced password reset) |
 | **S2** | Student Intake & Profiles | Weeks 3–4 | In-person student registration, photo upload, emergency contacts, profile cards, student ID generation | **Planned** |
 | **S3** | Course Catalog & Scheduling | Weeks 5–6 | Short-course definitions, class cohorts, timetable schedules, classroom assignments, enrollments | **Planned** |
 | **S4** | Academics & Operations | Weeks 7–8 | Session-by-session attendance tracking, trainer grade entry, QR code verification, PDF certificate generation | **Planned** |
@@ -350,8 +350,8 @@ The following schema migrations are currently present in the codebase:
 
 | Migration File | Primary Tables / Changes | Purpose |
 |---|---|---|
-| `001_auth_and_rbac.sql` | `roles`, `permissions`, `role_permissions`, `users`, `user_roles`, `user_sessions`, `password_resets` | Core authentication, session management, and RBAC cross-reference infrastructure. |
-| `002_seed_roles_permissions.sql` | Seeds `roles`, `permissions`, `role_permissions` | Populates the 7 standard training center roles and granular module permissions. |
+| `001_auth_and_rbac.sql` | `roles`, `permissions`, `role_permissions`, `staff`, `students` | Core authentication, staff identities across 6 roles, student code identities, and RBAC infrastructure. |
+| `002_seed_roles_permissions.sql` | Seeds `roles` (the 6 staff roles), `permissions`, `role_permissions` | Populates the 6 standard training center staff roles and granular module permissions with ON DUPLICATE KEY UPDATE. |
 | `003_student_profiles_and_documents.sql` | `students`, `student_emergency_contacts`, `student_documents` | In-person student registration, identity details, emergency contacts, and document attachments. |
 | `004_courses_and_enrollments.sql` | `course_categories`, `courses`, `classrooms`, `cohorts`, `enrollments` | Course offerings, classroom allocation, cohort timetables, and student enrollments. |
 | `005_attendance_and_grading.sql` | `cohort_sessions`, `attendance_records`, `course_assessments`, `assessment_grades`, `certificates` | Daily attendance tracking, assessment scores, and QR-verifiable certificate issuance. |
@@ -431,6 +431,7 @@ feature/sN-short-name       feature/sN-short-name
 
 | Date | Change | Who Needs to Act |
 |---|---|---|
+| **2026-10-19** | **Sprint 1 Completed**: Foundation, Security & Authentication. Delivered two completely separated portals (Staff & Student), 6 staff roles (`owner`, `receptionist`, `academic_admin`, `trainer`, `accountant`, `manager`), owner-only staff provisioning with single-use temporary password generation, forced password reset flow (`/change-password`), rate-limited login endpoints, production-safe migrations (`001_auth_and_rbac.sql` & `002_seed_roles_permissions.sql`), role and portal route guards, and modern purple & white landing page. | All / Backend / Frontend |
 | **2026-10-17** | Added complete 10-migration suite (`001_auth_and_rbac.sql` through `010_lms_sync.sql`) covering RBAC, student intake, courses, attendance, cashiering, payables, ledger, compliance, and LMS sync. Updated migration scripts to `npm run migrate` and `npm run seed`. | Backend / Database Architects / All |
 | **2026-10-17** | Initial project initialization: Full-stack monorepo foundation with React 19, Tailwind CSS 4, Express API, MySQL 8 migration runner, JWT authentication, and baseline technical README. | All developers / Team |
 

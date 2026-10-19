@@ -1,40 +1,115 @@
 import React from 'react';
-import { Routes, Route } from 'react-router-dom';
-import { AppLayout } from '../components/layouts/AppLayout.js';
-import { AuthLayout } from '../components/layouts/AuthLayout.js';
-import { ProtectedRoute } from './ProtectedRoute.js';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth.js';
+import { getStaffDashboardPath } from '../context/AuthContext.js';
+import { StaffRole } from '../types/auth.js';
 
+// Layouts
+import { StaffLayout } from '../components/layouts/StaffLayout.js';
+import { StudentLayout } from '../components/layouts/StudentLayout.js';
+
+// Guards
+import { ProtectedRoute } from './ProtectedRoute.js';
+import { PublicOnlyRoute } from './PublicOnlyRoute.js';
+import { PortalRoute } from './PortalRoute.js';
+import { RoleRoute } from './RoleRoute.js';
+
+// Pages
 import { LandingPage } from '../pages/LandingPage.js';
-import { LoginPage } from '../pages/auth/LoginPage.js';
-import { PortalPlaceholderPage } from '../pages/portal/PortalPlaceholderPage.js';
-import { StaffPlaceholderPage } from '../pages/staff/StaffPlaceholderPage.js';
+import { StaffLoginPage } from '../pages/auth/StaffLoginPage.js';
+import { StudentLoginPage } from '../pages/auth/StudentLoginPage.js';
+import { ChangePasswordPage } from '../pages/auth/ChangePasswordPage.js';
+import { ForbiddenPage } from '../pages/ForbiddenPage.js';
 import { NotFoundPage } from '../pages/NotFoundPage.js';
+
+// Staff Dashboards
+import { OwnerDashboard } from '../pages/staff/OwnerDashboard.js';
+import { OwnerUsersPage } from '../pages/staff/OwnerUsersPage.js';
+import { ReceptionDashboard } from '../pages/staff/ReceptionDashboard.js';
+import { AcademicsDashboard } from '../pages/staff/AcademicsDashboard.js';
+import { TrainerDashboard } from '../pages/staff/TrainerDashboard.js';
+import { AccountingDashboard } from '../pages/staff/AccountingDashboard.js';
+import { ManagerDashboard } from '../pages/staff/ManagerDashboard.js';
+
+// Student Dashboard
+import { StudentDashboard } from '../pages/student/StudentDashboard.js';
+
+// Helper component to redirect root /staff to the current staff role's dashboard
+const StaffRoleRedirect: React.FC = () => {
+  const { user } = useAuth();
+  if (!user || user.portal !== 'staff') {
+    return <Navigate to="/staff/login" replace />;
+  }
+  const target = getStaffDashboardPath(user.role as StaffRole);
+  return <Navigate to={target} replace />;
+};
 
 export const AppRoutes: React.FC = () => {
   return (
     <Routes>
-      {/* Public Pages with Standard Header/Footer */}
-      <Route element={<AppLayout />}>
-        <Route path="/" element={<LandingPage />} />
+      {/* 1. Public Landing Page */}
+      <Route path="/" element={<LandingPage />} />
 
-        {/* Protected User Portal */}
-        <Route element={<ProtectedRoute />}>
-          <Route path="/portal" element={<PortalPlaceholderPage />} />
-        </Route>
-
-        {/* Protected Staff & Admin Hub */}
-        <Route element={<ProtectedRoute allowedRoles={['admin', 'staff']} />}>
-          <Route path="/staff" element={<StaffPlaceholderPage />} />
-        </Route>
-
-        {/* Catch-all 404 */}
-        <Route path="*" element={<NotFoundPage />} />
+      {/* 2. Public-Only Authentication Routes */}
+      <Route element={<PublicOnlyRoute />}>
+        <Route path="/staff/login" element={<StaffLoginPage />} />
+        <Route path="/student/login" element={<StudentLoginPage />} />
       </Route>
 
-      {/* Authentication Pages with Minimal Centered Layout */}
-      <Route element={<AuthLayout />}>
-        <Route path="/login" element={<LoginPage />} />
+      {/* 3. Global Protected Routes (Both Staff and Student) */}
+      <Route element={<ProtectedRoute />}>
+        <Route path="/change-password" element={<ChangePasswordPage />} />
+
+        {/* 4. Staff Portal Routes (Strictly Isolated to Staff Token) */}
+        <Route element={<PortalRoute portal="staff" />}>
+          <Route path="/staff" element={<StaffLayout />}>
+            <Route index element={<StaffRoleRedirect />} />
+
+            {/* Owner Role Only */}
+            <Route element={<RoleRoute allowedRoles={['owner']} />}>
+              <Route path="owner" element={<OwnerDashboard />} />
+              <Route path="owner/users" element={<OwnerUsersPage />} />
+            </Route>
+
+            {/* Manager Role (and Owner) */}
+            <Route element={<RoleRoute allowedRoles={['owner', 'manager']} />}>
+              <Route path="manager" element={<ManagerDashboard />} />
+            </Route>
+
+            {/* Academic Admin (and Owner, Manager) */}
+            <Route element={<RoleRoute allowedRoles={['owner', 'manager', 'academic_admin']} />}>
+              <Route path="academics" element={<AcademicsDashboard />} />
+            </Route>
+
+            {/* Trainer (and Owner, Manager, Academic Admin) */}
+            <Route element={<RoleRoute allowedRoles={['owner', 'manager', 'academic_admin', 'trainer']} />}>
+              <Route path="trainer" element={<TrainerDashboard />} />
+            </Route>
+
+            {/* Accountant (and Owner, Manager) */}
+            <Route element={<RoleRoute allowedRoles={['owner', 'manager', 'accountant']} />}>
+              <Route path="accounting" element={<AccountingDashboard />} />
+            </Route>
+
+            {/* Receptionist (and Owner, Manager, Academic Admin) */}
+            <Route element={<RoleRoute allowedRoles={['owner', 'manager', 'academic_admin', 'receptionist']} />}>
+              <Route path="reception" element={<ReceptionDashboard />} />
+            </Route>
+          </Route>
+        </Route>
+
+        {/* 5. Student Portal Routes (Strictly Isolated to Student Token) */}
+        <Route element={<PortalRoute portal="student" />}>
+          <Route path="/student" element={<StudentLayout />}>
+            <Route index element={<Navigate to="/student/dashboard" replace />} />
+            <Route path="dashboard" element={<StudentDashboard />} />
+          </Route>
+        </Route>
       </Route>
+
+      {/* 6. Utility & Error Pages */}
+      <Route path="/forbidden" element={<ForbiddenPage />} />
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
 };
