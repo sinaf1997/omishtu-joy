@@ -1,72 +1,77 @@
 import { Request, Response } from 'express';
-import jwt, { SignOptions } from 'jsonwebtoken';
-import { env } from '../../config/env.js';
-import { usersService } from '../users/users.service.js';
-import { comparePassword } from '../../utils/password.js';
+import { authService } from './auth.service.js';
 import { sendSuccess, sendError } from '../../utils/api-response.js';
-import { UserJwtPayload } from '../../types/index.js';
-import { LoginInput } from './auth.schema.js';
+import {
+  StaffLoginInput,
+  StudentLoginInput,
+  ChangePasswordInput,
+} from './auth.schema.js';
 
-export async function login(req: Request, res: Response): Promise<void> {
-  const { email, password } = req.body as LoginInput;
+export async function loginStaff(req: Request, res: Response): Promise<void> {
+  const { email, password } = req.body as StaffLoginInput;
 
-  const user = await usersService.findByEmail(email);
-  if (!user) {
-    sendError(res, 'Invalid email or password', 401, 'INVALID_CREDENTIALS');
+  try {
+    const session = await authService.loginStaff(email, password);
+    sendSuccess(res, session);
+  } catch (err: unknown) {
+    const errorWithStatus = err as { statusCode?: number; code?: string; message?: string };
+    const statusCode = errorWithStatus.statusCode || 500;
+    const errorCode = errorWithStatus.code || 'STAFF_LOGIN_FAILED';
+    sendError(res, errorWithStatus.message || 'Staff login failed', statusCode, errorCode);
+  }
+}
+
+export async function loginStudent(req: Request, res: Response): Promise<void> {
+  const { studentCode, password } = req.body as StudentLoginInput;
+
+  try {
+    const session = await authService.loginStudent(studentCode, password);
+    sendSuccess(res, session);
+  } catch (err: unknown) {
+    const errorWithStatus = err as { statusCode?: number; code?: string; message?: string };
+    const statusCode = errorWithStatus.statusCode || 500;
+    const errorCode = errorWithStatus.code || 'STUDENT_LOGIN_FAILED';
+    sendError(res, errorWithStatus.message || 'Student login failed', statusCode, errorCode);
+  }
+}
+
+export async function changePassword(req: Request, res: Response): Promise<void> {
+  if (!req.user) {
+    sendError(res, 'Authentication required', 401, 'UNAUTHORIZED');
     return;
   }
 
-  if (!user.isActive) {
-    sendError(res, 'User account is inactive', 403, 'ACCOUNT_INACTIVE');
-    return;
+  const { currentPassword, newPassword } = req.body as ChangePasswordInput;
+
+  try {
+    const session = await authService.changePassword(
+      req.user.id,
+      req.user.portal,
+      currentPassword,
+      newPassword
+    );
+    sendSuccess(res, session);
+  } catch (err: unknown) {
+    const errorWithStatus = err as { statusCode?: number; code?: string; message?: string };
+    const statusCode = errorWithStatus.statusCode || 500;
+    const errorCode = errorWithStatus.code || 'PASSWORD_CHANGE_FAILED';
+    sendError(res, errorWithStatus.message || 'Password change failed', statusCode, errorCode);
   }
-
-  const isPasswordValid = await comparePassword(password, user.passwordHash);
-  if (!isPasswordValid) {
-    sendError(res, 'Invalid email or password', 401, 'INVALID_CREDENTIALS');
-    return;
-  }
-
-  const payload: UserJwtPayload = {
-    userId: user.id,
-    email: user.email,
-    role: user.role,
-  };
-
-  const signOptions: SignOptions = {
-    expiresIn: env.JWT_EXPIRES_IN as unknown as SignOptions['expiresIn'],
-  };
-
-  const token = jwt.sign(payload, env.JWT_SECRET, signOptions);
-
-  sendSuccess(res, {
-    token,
-    user: {
-      id: user.id,
-      email: user.email,
-      role: user.role,
-    },
-  });
 }
 
 export async function getMe(req: Request, res: Response): Promise<void> {
   if (!req.user) {
-    sendError(res, 'Unauthorized', 401, 'UNAUTHORIZED');
+    sendError(res, 'Authentication required', 401, 'UNAUTHORIZED');
     return;
   }
 
-  const user = await usersService.findById(req.user.id);
-  if (!user) {
-    sendError(res, 'User not found', 404, 'USER_NOT_FOUND');
-    return;
+  try {
+    const user = await authService.getMe(req.user.id, req.user.portal);
+    sendSuccess(res, user);
+  } catch (err: unknown) {
+    const errorWithStatus = err as { statusCode?: number; code?: string; message?: string };
+    const statusCode = errorWithStatus.statusCode || 500;
+    const errorCode = errorWithStatus.code || 'SESSION_FETCH_FAILED';
+    sendError(res, errorWithStatus.message || 'Failed to fetch session', statusCode, errorCode);
   }
-
-  sendSuccess(res, {
-    id: user.id,
-    email: user.email,
-    role: user.role,
-    isActive: user.isActive,
-    createdAt: user.createdAt,
-    updatedAt: user.updatedAt,
-  });
 }

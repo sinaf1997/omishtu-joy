@@ -1,23 +1,27 @@
 import axios, { AxiosError } from 'axios';
 import { ApiResponse } from '../types/api.js';
 
-let authToken: string | null = sessionStorage.getItem('auth_token');
+const TOKEN_KEY = 'omishtu_auth_token';
+let authToken: string | null = localStorage.getItem(TOKEN_KEY);
 
 export function setAuthToken(token: string | null): void {
   authToken = token;
   if (token) {
-    sessionStorage.setItem('auth_token', token);
+    localStorage.setItem(TOKEN_KEY, token);
   } else {
-    sessionStorage.removeItem('auth_token');
+    localStorage.removeItem(TOKEN_KEY);
   }
 }
 
 export function getAuthToken(): string | null {
+  if (!authToken) {
+    authToken = localStorage.getItem(TOKEN_KEY);
+  }
   return authToken;
 }
 
 export const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:4000/api',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -25,18 +29,32 @@ export const apiClient = axios.create({
 });
 
 apiClient.interceptors.request.use((config) => {
-  if (authToken && config.headers) {
-    config.headers.Authorization = `Bearer ${authToken}`;
+  const token = getAuthToken();
+  if (token && config.headers) {
+    config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 });
+
+// Listener for 401 auto-logout
+type UnauthorizedCallback = () => void;
+let onUnauthorizedCallback: UnauthorizedCallback | null = null;
+
+export function registerUnauthorizedHandler(callback: UnauthorizedCallback): () => void {
+  onUnauthorizedCallback = callback;
+  return () => {
+    onUnauthorizedCallback = null;
+  };
+}
 
 apiClient.interceptors.response.use(
   (response) => response,
   (error: AxiosError<ApiResponse>) => {
     if (error.response?.status === 401) {
-      // Clear expired or invalid token
       setAuthToken(null);
+      if (onUnauthorizedCallback) {
+        onUnauthorizedCallback();
+      }
     }
     return Promise.reject(error);
   }

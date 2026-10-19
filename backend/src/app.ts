@@ -5,11 +5,15 @@ import morgan from 'morgan';
 import { env, corsOrigin } from './config/env.js';
 import { healthRouter } from './modules/health/health.routes.js';
 import { authRouter } from './modules/auth/auth.routes.js';
+import { usersRouter } from './modules/users/users.routes.js';
 import { notFoundHandler } from './middleware/not-found.js';
 import { errorHandler } from './middleware/error-handler.js';
 
 export function createApp(): Express {
   const app = express();
+
+  // Trust proxy for rate limiting behind reverse proxies (if deployed)
+  app.set('trust proxy', 1);
 
   // Security Middleware
   app.use(helmet());
@@ -36,6 +40,8 @@ export function createApp(): Express {
   // API Routes
   app.use('/api/health', healthRouter);
   app.use('/api/auth', authRouter);
+  app.use('/api/users', usersRouter);
+  app.use('/api/roles', usersRouter);
 
   // 404 Handler
   app.use(notFoundHandler);

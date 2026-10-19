@@ -1,245 +1,215 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
-import { checkHealth, HealthData } from '../api/health.js';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/card.js';
-import { Badge } from '../components/ui/badge.js';
-import { Button } from '../components/ui/button.js';
+import { useAuth } from '../hooks/useAuth.js';
+import { getStaffDashboardPath } from '../context/AuthContext.js';
+import { StaffRole } from '../types/auth.js';
 import {
-  Activity,
-  Server,
-  Database,
-  Code,
+  GraduationCap,
+  Calendar,
+  Receipt,
+  ShieldCheck,
+  ArrowRight,
+  Layers,
+  Sparkles,
   CheckCircle2,
-  AlertCircle,
-  RefreshCw,
-  TrendingUp,
 } from 'lucide-react';
-import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-} from 'recharts';
-
-const sampleChartData = [
-  { month: 'May', enrollments: 35, completions: 28 },
-  { month: 'Jun', enrollments: 48, completions: 42 },
-  { month: 'Jul', enrollments: 62, completions: 55 },
-  { month: 'Aug', enrollments: 80, completions: 72 },
-  { month: 'Sep', enrollments: 95, completions: 88 },
-  { month: 'Oct', enrollments: 120, completions: 104 },
-];
 
 export const LandingPage: React.FC = () => {
-  const [health, setHealth] = useState<HealthData | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const { user, isAuthenticated } = useAuth();
 
-  const fetchHealth = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await checkHealth();
-      setHealth(data);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Backend connection unavailable');
-      setHealth(null);
-    } finally {
-      setLoading(false);
-    }
+  // If user is already logged in, determine their destination
+  const getDestinationPath = () => {
+    if (!isAuthenticated || !user) return null;
+    if (user.portal === 'student') return '/student/dashboard';
+    return getStaffDashboardPath(user.role as StaffRole);
   };
 
-  useEffect(() => {
-    fetchHealth();
-  }, []);
+  const authenticatedDestination = getDestinationPath();
+
+  const featureCards = [
+    {
+      icon: GraduationCap,
+      title: 'Students',
+      description:
+        'In-person intake, receptionist-issued student IDs, emergency contacts, and complete academic profiles.',
+    },
+    {
+      icon: Calendar,
+      title: 'Schedule',
+      description:
+        'Course cohorts, classroom assignments, timetable scheduling, and session-by-session attendance tracking.',
+    },
+    {
+      icon: Receipt,
+      title: 'Finance',
+      description:
+        'Tuition fee schedules, cashiering at front desk, automated PDF receipts, and general ledger reconciliation.',
+    },
+    {
+      icon: ShieldCheck,
+      title: 'Security',
+      description:
+        'Isolated staff and student portals, role-based authorization, enforced password resets, and session guards.',
+    },
+  ];
 
   return (
-    <div className="space-y-10 py-6">
-      {/* Hero Section */}
-      <div className="text-center space-y-4 max-w-3xl mx-auto">
-        <Badge variant="secondary" className="px-3.5 py-1 text-xs">
-          Omishtu-Joy Platform Active
-        </Badge>
-        <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-foreground">
-          Training Center Management Platform
-        </h1>
-        <p className="text-lg text-muted-foreground">
-          Streamlining student registration, academic scheduling, attendance verification, cashiering, and core financial accounting in a unified purple &amp; white design.
-        </p>
-        <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
-          <Link to="/login">
-            <Button size="lg" className="shadow-sm">Access Staff Hub</Button>
+    <div className="min-h-screen flex flex-col bg-background text-foreground selection:bg-secondary selection:text-primary">
+      {/* Top Navigation */}
+      <header className="sticky top-0 z-50 bg-card/80 backdrop-blur-md border-b border-border transition-all">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+          {/* Logo & Subtitle */}
+          <Link to="/" className="flex items-center gap-3 group">
+            <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center text-primary-foreground shadow-sm group-hover:scale-105 transition-transform">
+              <Layers className="h-5 w-5" />
+            </div>
+            <div className="flex flex-col">
+              <span className="font-bold text-xl tracking-tight text-foreground leading-none">
+                Omishtu-Joy
+              </span>
+              <span className="text-[11px] font-medium tracking-wider uppercase text-muted-foreground mt-1">
+                Training Center OS
+              </span>
+            </div>
           </Link>
-          <Button variant="outline" size="lg" onClick={fetchHealth} disabled={loading} className="flex items-center gap-2">
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-            <span>Probe API Health</span>
-          </Button>
+
+          {/* Nav Links */}
+          <div className="flex items-center gap-3 sm:gap-6">
+            {isAuthenticated && authenticatedDestination ? (
+              <Link
+                to={authenticatedDestination}
+                className="inline-flex items-center gap-2 rounded-full bg-primary text-primary-foreground px-5 py-2.5 text-sm font-medium hover:bg-primary/90 shadow-sm transition-all"
+              >
+                <span>Go to Dashboard</span>
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            ) : (
+              <>
+                <Link
+                  to="/student/login"
+                  className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors px-2 py-1"
+                >
+                  Student Login
+                </Link>
+                <Link
+                  to="/staff/login"
+                  className="inline-flex items-center justify-center rounded-full bg-primary text-primary-foreground px-5 py-2.5 text-sm font-medium hover:bg-primary/90 shadow-sm transition-all"
+                >
+                  Staff Login
+                </Link>
+              </>
+            )}
+          </div>
         </div>
-      </div>
+      </header>
 
-      {/* Backend Live Status Card */}
-      <Card className="max-w-2xl mx-auto">
-        <CardHeader className="flex flex-row items-center justify-between pb-2 border-b border-border">
-          <div className="space-y-1">
-            <CardTitle className="text-lg flex items-center gap-2.5 text-foreground">
-              <div className="h-8 w-8 rounded-md bg-secondary flex items-center justify-center">
-                <Activity className="h-4 w-4 text-primary" />
-              </div>
-              API Connectivity &amp; Status
-            </CardTitle>
-            <CardDescription>Live heartbeat to Express backend (/api/health)</CardDescription>
-          </div>
-          {loading ? (
-            <Badge variant="subtle">Connecting...</Badge>
-          ) : health?.status === 'ok' ? (
-            <Badge variant="success" className="flex items-center gap-1.5 py-1 px-3">
-              <CheckCircle2 className="h-3.5 w-3.5 text-primary" /> Active Online
-            </Badge>
-          ) : (
-            <Badge variant="destructive" className="flex items-center gap-1.5 py-1 px-3">
-              <AlertCircle className="h-3.5 w-3.5" /> Standby Mode
-            </Badge>
-          )}
-        </CardHeader>
-        <CardContent className="pt-6">
-          {loading ? (
-            <div className="py-6 text-center text-sm text-muted-foreground flex flex-col items-center gap-2">
-              <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-              <span>Probing server status...</span>
+      {/* Main Hero & Content Surface */}
+      <main className="flex-1 flex flex-col items-center justify-center">
+        {/* Subtle decorative purple glow using existing background and secondary tokens */}
+        <div className="w-full relative overflow-hidden py-16 sm:py-24">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center flex flex-col items-center relative z-10">
+            {/* Small Pill Badge */}
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-border bg-secondary/70 shadow-sm mb-6">
+              <span className="h-2 w-2 rounded-full bg-primary" />
+              <span className="text-xs font-semibold tracking-wide text-secondary-foreground">
+                Built for modern training centers
+              </span>
             </div>
-          ) : health ? (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
-              <div className="bg-secondary/70 p-3.5 rounded-lg border border-border">
-                <span className="text-xs text-muted-foreground block font-medium">Service State</span>
-                <span className="font-semibold uppercase text-primary text-base">{health.status}</span>
-              </div>
-              <div className="bg-secondary/70 p-3.5 rounded-lg border border-border">
-                <span className="text-xs text-muted-foreground block font-medium">Environment</span>
-                <span className="font-semibold capitalize text-foreground text-base">{health.environment}</span>
-              </div>
-              <div className="bg-secondary/70 p-3.5 rounded-lg border border-border">
-                <span className="text-xs text-muted-foreground block font-medium">System Uptime</span>
-                <span className="font-semibold text-foreground text-base">{health.uptime}s</span>
-              </div>
-              <div className="bg-secondary/70 p-3.5 rounded-lg border border-border">
-                <span className="text-xs text-muted-foreground block font-medium">Server Time</span>
-                <span className="font-mono text-xs text-secondary-foreground font-semibold mt-1 block">
-                  {new Date(health.timestamp).toLocaleTimeString()}
-                </span>
-              </div>
-            </div>
-          ) : (
-            <div className="p-4 rounded-lg bg-secondary border border-border text-foreground text-sm flex items-start gap-3">
-              <AlertCircle className="h-5 w-5 mt-0.5 text-primary shrink-0" />
-              <div className="space-y-1">
-                <p className="font-semibold text-primary">Backend Service Unavailable</p>
-                <p className="text-xs text-muted-foreground">
-                  The API service on port 4000 is unreachable. Run `npm run dev:backend` to launch the API service. Details: {error}
-                </p>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
-      {/* Analytics Preview Using Purple Theme */}
-      <Card className="max-w-4xl mx-auto">
-        <CardHeader className="border-b border-border">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <div>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-primary" />
-                Training Center Analytics (Purple Theme System)
-              </CardTitle>
-              <CardDescription>Academic intake vs graduation metrics rendered using purple palette tokens</CardDescription>
+            {/* Big Headline with machine in primary purple */}
+            <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-foreground max-w-4xl mx-auto leading-[1.12]">
+              Run your training center like a{' '}
+              <span className="text-primary relative inline-block">
+                machine.
+              </span>
+            </h1>
+
+            {/* Subtitle */}
+            <p className="mt-6 text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+              One unified platform for center owners, managers, reception, academic staff,
+              trainers, and students. Intake, attendance, grading, tuition cashiering, and
+              financial governance — all organized in a high-efficiency system.
+            </p>
+
+            {/* Hero CTAs */}
+            <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4 w-full max-w-md">
+              <Link
+                to="/staff/login"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-full bg-primary text-primary-foreground px-8 py-3.5 text-base font-semibold shadow-md hover:bg-primary/90 transition-all group"
+              >
+                <span>Staff sign in</span>
+                <ArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
+              </Link>
+              <Link
+                to="/student/login"
+                className="w-full sm:w-auto inline-flex items-center justify-center rounded-full border border-border bg-card text-foreground px-8 py-3.5 text-base font-semibold shadow-sm hover:bg-secondary hover:text-primary transition-all"
+              >
+                Student sign in
+              </Link>
             </div>
-            <div className="flex items-center gap-3 text-xs">
-              <div className="flex items-center gap-1.5">
-                <div className="h-3 w-3 rounded-sm bg-[#6D28D9]" />
-                <span className="text-muted-foreground">Enrollments (#6D28D9)</span>
+
+            {/* Fast Stats or Guarantee indicators */}
+            <div className="mt-12 flex flex-wrap items-center justify-center gap-6 sm:gap-10 text-xs font-medium text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-primary" />
+                <span>Zero ORM Pure SQL</span>
               </div>
-              <div className="flex items-center gap-1.5">
-                <div className="h-3 w-3 rounded-sm bg-[#A78BFA]" />
-                <span className="text-muted-foreground">Completions (#A78BFA)</span>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-primary" />
+                <span>Isolated Dual Portals</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-primary" />
+                <span>6 Granular Staff Roles</span>
               </div>
             </div>
           </div>
-        </CardHeader>
-        <CardContent className="pt-6">
-          <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={sampleChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <XAxis dataKey="month" stroke="#6B647A" fontSize={12} tickLine={false} axisLine={{ stroke: '#E9E3F5' }} />
-                <YAxis stroke="#6B647A" fontSize={12} tickLine={false} axisLine={{ stroke: '#E9E3F5' }} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#FFFFFF',
-                    borderColor: '#E9E3F5',
-                    borderRadius: '8px',
-                    color: '#27213B',
-                    boxShadow: '0 4px 12px rgba(109, 40, 217, 0.08)',
-                  }}
-                />
-                <Bar dataKey="enrollments" fill="#6D28D9" radius={[4, 4, 0, 0]} name="New Enrollments" />
-                <Bar dataKey="completions" fill="#A78BFA" radius={[4, 4, 0, 0]} name="Graduations" />
-              </BarChart>
-            </ResponsiveContainer>
+        </div>
+
+        {/* 4 Feature Cards */}
+        <section className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {featureCards.map((feature, idx) => {
+              const Icon = feature.icon;
+              return (
+                <div
+                  key={idx}
+                  className="rounded-2xl border border-border bg-card p-6 shadow-sm hover:shadow-md hover:border-primary/40 transition-all duration-200 flex flex-col group"
+                >
+                  <div className="h-12 w-12 rounded-xl bg-secondary border border-border flex items-center justify-center text-primary mb-5 group-hover:scale-105 transition-transform">
+                    <Icon className="h-6 w-6" />
+                  </div>
+                  <h3 className="text-xl font-bold text-foreground mb-2">
+                    {feature.title}
+                  </h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed flex-1">
+                    {feature.description}
+                  </p>
+                </div>
+              );
+            })}
           </div>
-        </CardContent>
-      </Card>
+        </section>
+      </main>
 
-      {/* Architecture Highlights Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
-          <CardHeader>
-            <div className="h-10 w-10 rounded-lg bg-secondary border border-border flex items-center justify-center mb-2">
-              <Code className="h-5 w-5 text-primary" />
-            </div>
-            <CardTitle className="text-lg">Modern Frontend</CardTitle>
-            <CardDescription>React 19 &amp; Tailwind CSS 4</CardDescription>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground space-y-2">
-            <p>&bull; Pure purple &amp; white design system</p>
-            <p>&bull; shadcn/ui accessible components</p>
-            <p>&bull; Axios with automatic Bearer interceptor</p>
-            <p>&bull; Recharts &amp; jsPDF integration ready</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <div className="h-10 w-10 rounded-lg bg-secondary border border-border flex items-center justify-center mb-2">
-              <Server className="h-5 w-5 text-primary" />
-            </div>
-            <CardTitle className="text-lg">Backend Service</CardTitle>
-            <CardDescription>Express &amp; TypeScript</CardDescription>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground space-y-2">
-            <p>&bull; Strict TypeScript &amp; Zod validation</p>
-            <p>&bull; Standardized JSON response envelope</p>
-            <p>&bull; Centralized error &amp; 404 handlers</p>
-            <p>&bull; JWT auth &amp; bcrypt password hashing</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <div className="h-10 w-10 rounded-lg bg-secondary border border-border flex items-center justify-center mb-2">
-              <Database className="h-5 w-5 text-primary" />
-            </div>
-            <CardTitle className="text-lg">Database Tier</CardTitle>
-            <CardDescription>MySQL 8.x with mysql2/promise</CardDescription>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground space-y-2">
-            <p>&bull; 10 pure SQL numbered migrations</p>
-            <p>&bull; Zero ORMs &bull; Clean repositories</p>
-            <p>&bull; Transaction management helpers</p>
-            <p>&bull; Connection pooling &amp; health probe</p>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Footer */}
+      <footer className="border-t border-border bg-card py-8 text-sm text-muted-foreground">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2 text-foreground font-semibold">
+            <Sparkles className="h-4 w-4 text-primary" />
+            <span>Omishtu-Joy Training Center Management System</span>
+          </div>
+          <div className="flex items-center gap-6 text-xs">
+            <Link to="/staff/login" className="hover:text-primary transition-colors">
+              Staff Portal
+            </Link>
+            <Link to="/student/login" className="hover:text-primary transition-colors">
+              Student Portal
+            </Link>
+            <span>&copy; {new Date().getFullYear()} Omishtu-Joy</span>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };

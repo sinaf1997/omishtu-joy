@@ -1,50 +1,40 @@
 -- ==============================================================================
 -- Migration: 010_lms_sync.sql
--- Description: External LMS Synchronization and Executive Analytics Snapshots
+-- Sprint: S9
+-- Description: External LMS synchronization logs and LMS foreign identifier columns
 -- ==============================================================================
 
--- 1. External LMS Service Configurations
-CREATE TABLE IF NOT EXISTS lms_configs (
-  id VARCHAR(36) NOT NULL,
-  provider VARCHAR(50) NOT NULL,
-  base_url VARCHAR(255) NOT NULL,
-  api_key_hash VARCHAR(255) NULL,
-  sync_interval_minutes INT NOT NULL DEFAULT 60,
-  is_active TINYINT(1) NOT NULL DEFAULT 1,
-  last_sync_at TIMESTAMP NULL,
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+-- ==============================================================================
+-- Changes to existing tables
+-- ==============================================================================
 
--- 2. LMS Synchronization Diagnostics & Logs
+-- 1. Add lms_user_id to students
+SET @c := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'students' AND COLUMN_NAME = 'lms_user_id');
+SET @sql := IF(@c = 0, 'ALTER TABLE students ADD COLUMN lms_user_id VARCHAR(100) NULL AFTER student_code, ADD UNIQUE KEY uq_students_lms_id (lms_user_id)', 'SELECT ''students.lms_user_id already exists - skipped'' AS info');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- 2. Add lms_course_id to courses
+SET @c := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'courses' AND COLUMN_NAME = 'lms_course_id');
+SET @sql := IF(@c = 0, 'ALTER TABLE courses ADD COLUMN lms_course_id VARCHAR(100) NULL AFTER code, ADD UNIQUE KEY uq_courses_lms_id (lms_course_id)', 'SELECT ''courses.lms_course_id already exists - skipped'' AS info');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- ==============================================================================
+-- Tables in dependency order
+-- ==============================================================================
+
+-- 1. LMS Synchronization Logs
 CREATE TABLE IF NOT EXISTS lms_sync_logs (
   id VARCHAR(36) NOT NULL,
-  lms_config_id VARCHAR(36) NOT NULL,
-  sync_type ENUM('students', 'courses', 'enrollments', 'grades') NOT NULL,
-  records_synced INT NOT NULL DEFAULT 0,
+  sync_type ENUM('students', 'courses', 'enrollments', 'grades', 'full') NOT NULL,
+  status ENUM('started', 'completed', 'failed') NOT NULL DEFAULT 'started',
+  records_processed INT NOT NULL DEFAULT 0,
   records_failed INT NOT NULL DEFAULT 0,
-  status ENUM('success', 'failed', 'partial') NOT NULL,
-  error_details TEXT NULL,
+  error_summary TEXT NULL,
+  triggered_by_staff_id VARCHAR(36) NULL,
   started_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   completed_at TIMESTAMP NULL,
   PRIMARY KEY (id),
-  INDEX idx_lms_logs_config (lms_config_id),
-  INDEX idx_lms_logs_status (status),
-  CONSTRAINT fk_lms_logs_config FOREIGN KEY (lms_config_id) REFERENCES lms_configs (id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- 3. Executive Performance Analytics Snapshots
-CREATE TABLE IF NOT EXISTS analytics_snapshots (
-  id VARCHAR(36) NOT NULL,
-  snapshot_date DATE NOT NULL,
-  active_students_count INT NOT NULL DEFAULT 0,
-  active_cohorts_count INT NOT NULL DEFAULT 0,
-  total_revenue_month DECIMAL(14, 2) NOT NULL DEFAULT 0.00,
-  total_expenses_month DECIMAL(14, 2) NOT NULL DEFAULT 0.00,
-  net_profit_month DECIMAL(14, 2) NOT NULL DEFAULT 0.00,
-  attendance_rate_avg DECIMAL(5, 2) NOT NULL DEFAULT 0.00,
-  raw_metrics JSON NULL,
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (id),
-  UNIQUE KEY uq_analytics_snapshot_date (snapshot_date)
+  INDEX idx_lms_sync_type (sync_type),
+  INDEX idx_lms_sync_status (status),
+  CONSTRAINT fk_lms_staff FOREIGN KEY (triggered_by_staff_id) REFERENCES staff (id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

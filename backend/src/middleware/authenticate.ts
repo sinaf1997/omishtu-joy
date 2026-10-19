@@ -4,7 +4,7 @@ import { env } from '../config/env.js';
 import { UserJwtPayload } from '../types/index.js';
 import { sendError } from '../utils/api-response.js';
 
-export function authenticate(req: Request, res: Response, next: NextFunction): void {
+export function authGuard(req: Request, res: Response, next: NextFunction): void {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -16,10 +16,17 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
 
   try {
     const decoded = jwt.verify(token, env.JWT_SECRET) as UserJwtPayload;
+
+    if (!decoded.id || !decoded.role || !decoded.portal) {
+      sendError(res, 'Invalid authentication token payload', 401, 'INVALID_TOKEN');
+      return;
+    }
+
     req.user = {
-      id: decoded.userId,
-      email: decoded.email,
+      id: decoded.id,
       role: decoded.role,
+      portal: decoded.portal,
+      mustResetPassword: Boolean(decoded.mustResetPassword),
       isActive: true,
     };
     next();
@@ -31,3 +38,6 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
     sendError(res, 'Invalid authentication token', 401, 'INVALID_TOKEN');
   }
 }
+
+// Backward compatibility alias
+export const authenticate = authGuard;
