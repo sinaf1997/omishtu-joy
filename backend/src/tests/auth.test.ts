@@ -270,7 +270,7 @@ describe('Auth & RBAC Integration Flows', () => {
   });
 
   describe('4. Owner Staff Management & Portal Isolation', () => {
-    it('allows Owner to create new staff member, returns temp password once with must_reset_password = true', async () => {
+    it('allows Owner to create new staff member with owner-set password, phone, and must_reset_password = true', async () => {
       const ownerHash = await hashPassword('OwnerPass123!');
       const ownerStaff = {
         id: 'owner-id',
@@ -313,6 +313,7 @@ describe('Auth & RBAC Integration Flows', () => {
         id: 'new-trainer-id',
         full_name: 'New Trainer',
         email: 'newtrainer@omishtu.com',
+        phone: '+251912345678',
         password_hash: 'hashed',
         role_id: 'role-trainer',
         role_name: 'trainer',
@@ -331,16 +332,19 @@ describe('Auth & RBAC Integration Flows', () => {
         .send({
           fullName: 'New Trainer',
           email: 'newtrainer@omishtu.com',
+        phone: '+251912345678',
+          password: 'TrainerPass123!',
           role: 'trainer',
         });
 
       expect(createRes.status).toBe(201);
       expect(createRes.body.success).toBe(true);
-      expect(createRes.body.data).toHaveProperty('temporaryPassword');
-      expect(createRes.body.data.staff.mustResetPassword).toBe(true);
-      expect(createRes.body.data.staff.email).toBe('newtrainer@omishtu.com');
-      expect(createRes.body.data.staff).not.toHaveProperty('passwordHash');
-      expect(createRes.body.data.staff).not.toHaveProperty('password_hash');
+      expect(createRes.body.data).not.toHaveProperty('temporaryPassword');
+      expect(createRes.body.data.mustResetPassword).toBe(true);
+      expect(createRes.body.data.email).toBe('newtrainer@omishtu.com');
+      expect(createRes.body.data.phone).toBe('+251912345678');
+      expect(createRes.body.data).not.toHaveProperty('passwordHash');
+      expect(createRes.body.data).not.toHaveProperty('password_hash');
     });
 
     it('blocks non-owner staff from accessing /api/users', async () => {

@@ -15,6 +15,7 @@ export interface User {
   fullName?: string;
   full_name?: string;
   email?: string;
+  phone?: string | null;
   studentCode?: string;
   role: UserRole;
   role_name?: string;
@@ -57,6 +58,7 @@ export interface StaffMemberRecord {
   fullName: string;
   full_name?: string;
   email: string;
+  phone?: string | null;
   roleId: string;
   role_id?: string;
   role: StaffRole;
@@ -77,14 +79,25 @@ export interface StaffMemberRecord {
 }
 
 export interface CreateStaffPayload {
-  fullName: string;
+  fullName?: string;
+  full_name?: string;
   email: string;
+  phone?: string | null;
+  password: string;
   role: StaffRole;
 }
 
 export interface CreateStaffResponse {
-  staff: StaffMemberRecord;
-  temporaryPassword: string;
+  id: string;
+  full_name: string;
+  fullName?: string;
+  email: string;
+  phone?: string | null;
+  role: StaffRole;
+  is_active: boolean;
+  must_reset_password: boolean;
+  created_at: string;
+  staff?: StaffMemberRecord;
 }
 
 export interface StaffStats {
@@ -107,6 +120,7 @@ export interface RoleRecord {
 export interface UpdateStaffPayload {
   fullName?: string;
   full_name?: string;
+  phone?: string | null;
   role?: StaffRole;
   roleId?: string;
   role_id?: string;

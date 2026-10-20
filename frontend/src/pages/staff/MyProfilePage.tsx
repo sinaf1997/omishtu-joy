@@ -6,12 +6,10 @@ import {
   CardTitle,
   CardDescription,
   CardContent,
-  CardFooter,
 } from '../../components/ui/card.js';
 import { Input } from '../../components/ui/input.js';
 import { Label } from '../../components/ui/label.js';
 import { Button } from '../../components/ui/button.js';
-import { Badge } from '../../components/ui/badge.js';
 import {
   User as UserIcon,
   Lock,

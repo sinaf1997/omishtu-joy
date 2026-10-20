@@ -1,8 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth.js';
-import { getStaffDashboardPath } from '../../context/AuthContext.js';
-import { StaffRole } from '../../types/auth.js';
 import {
   Card,
   CardHeader,
@@ -35,6 +33,13 @@ export const ChangePasswordPage: React.FC = () => {
   const { user, changePassword, logout } = useAuth();
   const navigate = useNavigate();
 
+  // Staff update password exclusively inside My Profile (/staff/profile)
+  useEffect(() => {
+    if (user?.portal === 'staff') {
+      navigate('/staff/profile', { replace: true });
+    }
+  }, [user, navigate]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
@@ -61,14 +66,8 @@ export const ChangePasswordPage: React.FC = () => {
 
     setLoading(true);
     try {
-      const updatedUser = await changePassword({ currentPassword, newPassword, confirmPassword });
-
-      if (updatedUser.portal === 'student') {
-        navigate('/student/dashboard', { replace: true });
-      } else {
-        const dest = getStaffDashboardPath(updatedUser.role as StaffRole);
-        navigate(dest, { replace: true });
-      }
+      await changePassword({ currentPassword, newPassword, confirmPassword });
+      navigate('/student/dashboard', { replace: true });
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'response' in err) {
         const axiosError = err as { response?: { data?: { error?: { message?: string } } } };
@@ -100,9 +99,7 @@ export const ChangePasswordPage: React.FC = () => {
               Update Your Password
             </CardTitle>
             <CardDescription className="text-sm text-muted-foreground">
-              {user?.mustResetPassword
-                ? 'Your account requires an immediate password update before continuing'
-                : 'Choose a secure new password for your account'}
+              Choose a secure new password for your account
             </CardDescription>
           </CardHeader>
 
@@ -117,7 +114,7 @@ export const ChangePasswordPage: React.FC = () => {
 
               <div className="space-y-2">
                 <Label htmlFor="current-password" className="text-foreground font-medium text-sm">
-                  Current / Temporary Password
+                  Current Password
                 </Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />

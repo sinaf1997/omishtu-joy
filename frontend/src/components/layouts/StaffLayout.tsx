@@ -3,7 +3,6 @@ import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth.js';
 import { StaffRole } from '../../types/auth.js';
 import { getNavItemsForRole, NAV_SECTIONS, NavSection } from '../../config/navigation.js';
-import { Button } from '../ui/button.js';
 import {
   Layers,
   Search,
@@ -11,8 +10,6 @@ import {
   LogOut,
   Menu,
   X,
-  ShieldAlert,
-  ArrowRight,
 } from 'lucide-react';
 
 function getInitials(name?: string, email?: string): string {
@@ -215,33 +212,8 @@ export const StaffLayout: React.FC = () => {
           </div>
         </header>
 
-        {/* 3. Security Banner & Content Area */}
+        {/* 3. Content Area */}
         <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto space-y-6">
-          {/* Security Banner: Shown when mustResetPassword is true, non-blocking */}
-          {user?.mustResetPassword && (
-            <div className="rounded-xl border border-primary/30 bg-secondary/80 p-4 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div className="flex items-start gap-3">
-                <div className="h-9 w-9 rounded-lg bg-card text-primary border border-border flex items-center justify-center shrink-0">
-                  <ShieldAlert className="h-5 w-5" />
-                </div>
-                <div>
-                  <h4 className="text-sm font-bold text-foreground">
-                    Security Action Required
-                  </h4>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    You are using a default/temporary password. Please update your password immediately for security.
-                  </p>
-                </div>
-              </div>
-              <Link to="/change-password" className="shrink-0">
-                <Button size="sm" className="rounded-full gap-1.5 text-xs font-semibold shadow-sm">
-                  <span>Reset Password</span>
-                  <ArrowRight className="h-3.5 w-3.5" />
-                </Button>
-              </Link>
-            </div>
-          )}
-
           {/* Child Page Content */}
           <Outlet />
         </main>

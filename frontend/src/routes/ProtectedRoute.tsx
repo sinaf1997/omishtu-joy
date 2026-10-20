@@ -3,7 +3,7 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth.js';
 
 export const ProtectedRoute: React.FC = () => {
-  const { isAuthenticated, isLoading, user } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
   const location = useLocation();
 
   if (isLoading) {
@@ -21,11 +21,6 @@ export const ProtectedRoute: React.FC = () => {
     const isStaffRoute = location.pathname.startsWith('/staff');
     const redirectPath = isStaffRoute ? '/staff/login' : '/student/login';
     return <Navigate to={redirectPath} state={{ from: location }} replace />;
-  }
-
-  // Force password reset only for student portal; staff use non-blocking security banner
-  if (user?.portal === 'student' && user?.mustResetPassword && location.pathname !== '/change-password') {
-    return <Navigate to="/change-password" replace />;
   }
 
   return <Outlet />;

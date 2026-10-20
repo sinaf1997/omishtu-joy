@@ -50,7 +50,7 @@ export const StaffLoginPage: React.FC = () => {
     try {
       const user = await loginStaff({ email: cleanEmail, password });
 
-      // Route directly to intended staff path or role dashboard (security banner displays if mustResetPassword)
+      // Route directly to intended staff path or role dashboard
       const intendedPath = (location.state as { from?: { pathname: string } })?.from?.pathname;
       if (intendedPath && intendedPath.startsWith('/staff')) {
         navigate(intendedPath, { replace: true });
@@ -166,16 +166,16 @@ export const StaffLoginPage: React.FC = () => {
                 className="w-full flex items-center justify-center gap-2 rounded-full py-2.5 font-semibold"
                 disabled={loading}
               >
-                <span>{loading ? 'Verifying Credentials...' : 'Sign In to Staff Workspace'}</span>
+                <span>{loading ? 'Verifying Credentials...' : 'Sign In to Staff Portal'}</span>
                 {!loading && <ArrowRight className="h-4 w-4" />}
               </Button>
             </CardFooter>
           </form>
         </Card>
 
-        {/* Subtle footer notice */}
+        {/* Staff Help Text */}
         <p className="text-center text-xs text-muted-foreground">
-          Protected by role-based operational security &bull; Omishtu-Joy Platform
+          Assigned roles: Owner, Manager, Academic Admin, Course Trainer, Accountant, Receptionist.
         </p>
       </div>
     </div>

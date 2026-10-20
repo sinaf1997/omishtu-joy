@@ -63,6 +63,7 @@ describe('Owner Flow Verification & Access Control', () => {
         id: `user-${role}-id`,
         full_name: `Test ${role}`,
         email,
+        phone: '+251912345678',
         password_hash: 'hash',
         role_id: `role-${role}-id`,
         role_name: role,
@@ -81,17 +82,18 @@ describe('Owner Flow Verification & Access Control', () => {
         .send({
           fullName: `Test ${role}`,
           email,
+        phone: '+251912345678',
+          password: 'InitialPass123!',
           role,
         });
 
       expect(res.status).toBe(201);
       expect(res.body.success).toBe(true);
-      expect(res.body.data.staff.role).toBe(role);
-      expect(res.body.data.staff.mustResetPassword).toBe(true);
-      expect(res.body.data).toHaveProperty('temporaryPassword');
-      expect(typeof res.body.data.temporaryPassword).toBe('string');
-      expect(res.body.data.staff).not.toHaveProperty('passwordHash');
-      expect(res.body.data.staff).not.toHaveProperty('password_hash');
+      expect(res.body.data.role).toBe(role);
+      expect(res.body.data.mustResetPassword).toBe(true);
+      expect(res.body.data).not.toHaveProperty('temporaryPassword');
+      expect(res.body.data).not.toHaveProperty('passwordHash');
+      expect(res.body.data).not.toHaveProperty('password_hash');
     }
   });
 
@@ -253,6 +255,7 @@ describe('Owner Flow Verification & Access Control', () => {
       .send({
         fullName: 'New Person',
         email: 'duplicate@gmail.com',
+        password: 'Password123!',
         role: 'trainer',
       });
 

@@ -18,6 +18,7 @@ export function sanitizeStaff(record: StaffRecord): StaffMember {
     full_name: record.full_name,
     fullName: record.full_name,
     email: record.email,
+    phone: record.phone || null,
     roleId: record.role_id,
     role_id: record.role_id,
     role: record.role_name,
@@ -73,10 +74,13 @@ export class UsersService {
   }
 
   async createStaff(input: {
-    fullName: string;
+    fullName?: string;
+    full_name?: string;
     email: string;
+    phone?: string | null;
+    password: string;
     role: StaffRole;
-  }): Promise<{ staff: StaffMember; temporaryPassword: string }> {
+  }): Promise<StaffMember> {
     if (input.role === 'owner') {
       const err = new Error('Cannot assign the owner role');
       (err as unknown as { statusCode: number; code: string }).statusCode = 400;
@@ -84,9 +88,10 @@ export class UsersService {
       throw err;
     }
 
-    const existing = await this.repo.findStaffByEmail(input.email);
+    const email = input.email.toLowerCase().trim();
+    const existing = await this.repo.findStaffByEmail(email);
     if (existing) {
-      const err = new Error('A staff member with this email address already exists');
+      const err = new Error('A user with this email already exists');
       (err as unknown as { statusCode: number; code: string }).statusCode = 409;
       (err as unknown as { statusCode: number; code: string }).code = 'EMAIL_EXISTS';
       throw err;
@@ -100,14 +105,23 @@ export class UsersService {
       throw err;
     }
 
+    const fullName = (input.full_name ?? input.fullName ?? '').trim();
+    const rawPassword = input.password;
+    if (!rawPassword || rawPassword.length < 8) {
+      const err = new Error('Password must be at least 8 characters long');
+      (err as unknown as { statusCode: number; code: string }).statusCode = 400;
+      (err as unknown as { statusCode: number; code: string }).code = 'PASSWORD_TOO_SHORT';
+      throw err;
+    }
+
     const id = crypto.randomUUID();
-    const temporaryPassword = generateTempPassword(12);
-    const passwordHash = await hashPassword(temporaryPassword);
+    const passwordHash = await hashPassword(rawPassword);
 
     await this.repo.createStaff({
       id,
-      fullName: input.fullName,
-      email: input.email,
+      fullName,
+      email,
+      phone: input.phone || null,
       passwordHash,
       roleId: roleRecord.id,
       mustResetPassword: true,
@@ -119,10 +133,7 @@ export class UsersService {
       throw new Error('Failed to retrieve newly created staff member');
     }
 
-    return {
-      staff: sanitizeStaff(created),
-      temporaryPassword,
-    };
+    return sanitizeStaff(created);
   }
 
   async updateStaff(
@@ -142,6 +153,7 @@ export class UsersService {
     const targetIsActive = Boolean(targetStaff.is_active);
 
     const newFullName = updates.full_name ?? updates.fullName;
+    const newPhone = updates.phone;
     const newRole = updates.role;
     const newRoleId = updates.role_id ?? updates.roleId;
     const newIsActive = updates.is_active ?? updates.isActive;
@@ -219,6 +231,7 @@ export class UsersService {
 
     await this.repo.updateStaffProfile(targetId, {
       fullName: newFullName,
+      phone: newPhone,
       roleId: resolvedRoleId,
       isActive: newIsActive,
     });

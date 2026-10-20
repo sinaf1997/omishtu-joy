@@ -19,10 +19,6 @@ export const PublicOnlyRoute: React.FC = () => {
   }
 
   if (isAuthenticated && user) {
-    if (user.mustResetPassword) {
-      return <Navigate to="/change-password" replace />;
-    }
-
     if (user.portal === 'student') {
       return <Navigate to="/student/dashboard" replace />;
     }
