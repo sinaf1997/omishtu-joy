@@ -152,6 +152,7 @@ describe('Owner Staff Management & RBAC Protection', () => {
       .send({
         fullName: 'Existing Staff',
         email: 'existing@omishtu.com',
+        password: 'Password123!',
         role: 'trainer',
       });
 
@@ -406,21 +407,25 @@ describe('Owner Staff Management & RBAC Protection', () => {
 
         vi.spyOn(usersRepository, 'findStaffById').mockResolvedValueOnce(createdRecord);
 
+        const plainPassword = 'StaffInitialPass123!';
         const createRes = await request(app)
           .post('/api/users')
           .set('Authorization', `Bearer ${ownerToken}`)
           .send({
             fullName: `Created ${role}`,
             email: staffEmail,
+            phone: '+251 91 234 5678',
+            password: plainPassword,
             role,
           });
 
         expect(createRes.status).toBe(201);
-        const tempPassword = createRes.body.data.temporaryPassword;
-        expect(typeof tempPassword).toBe('string');
+        expect(createRes.body.data.role).toBe(role);
+        expect(createRes.body.data.mustResetPassword).toBe(true);
+        expect(createRes.body.data).not.toHaveProperty('temporaryPassword');
 
         // 2. Staff logs in with created credentials
-        const newHash = await hashPassword(tempPassword);
+        const newHash = await hashPassword(plainPassword);
         vi.spyOn(usersRepository, 'findStaffByEmail').mockResolvedValueOnce({
           ...createdRecord,
           password_hash: newHash,
@@ -431,7 +436,7 @@ describe('Owner Staff Management & RBAC Protection', () => {
           .post('/api/auth/staff/login')
           .send({
             email: staffEmail,
-            password: tempPassword,
+            password: plainPassword,
           });
 
         expect(loginRes.status).toBe(200);
@@ -450,5 +455,129 @@ describe('Owner Staff Management & RBAC Protection', () => {
         expect(blockedUsersRes.body.error.code).toBe('FORBIDDEN');
       });
     }
+  });
+
+  describe('Validation on POST /api/users: phone and password constraints', () => {
+    it('rejects short password (< 8 characters)', async () => {
+      const res = await request(app)
+        .post('/api/users')
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .send({
+          fullName: 'Short Pass User',
+          email: 'shortpass@omishtu.com',
+          password: 'short',
+          role: 'trainer',
+        });
+
+      expect(res.status).toBe(400);
+      expect(res.body.success).toBe(false);
+    });
+
+    it('rejects invalid phone numbers (< 7 digits or invalid characters)', async () => {
+      const resLetters = await request(app)
+        .post('/api/users')
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .send({
+          fullName: 'Bad Phone User',
+          email: 'badphone1@omishtu.com',
+          phone: 'abc-12345',
+          password: 'ValidPassword123!',
+          role: 'trainer',
+        });
+      expect(resLetters.status).toBe(400);
+
+      const resTooShort = await request(app)
+        .post('/api/users')
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .send({
+          fullName: 'Bad Phone User',
+          email: 'badphone2@omishtu.com',
+          phone: '+1234',
+          password: 'ValidPassword123!',
+          role: 'trainer',
+        });
+      expect(resTooShort.status).toBe(400);
+    });
+
+    it('accepts valid phone with +, spaces, and dashes, storing it cleaned', async () => {
+      vi.spyOn(usersRepository, 'findStaffByEmail').mockResolvedValueOnce(null);
+      vi.spyOn(usersRepository, 'findRoleByName').mockResolvedValueOnce({
+        id: 'role-trainer',
+        name: 'trainer',
+        display_name: 'Course Trainer',
+        description: null,
+      });
+      vi.spyOn(usersRepository, 'createStaff').mockResolvedValueOnce();
+      vi.spyOn(usersRepository, 'findStaffById').mockResolvedValueOnce({
+        id: 'phone-test-id',
+        full_name: 'Phone User',
+        email: 'phoneuser@omishtu.com',
+        phone: '+251912345678',
+        password_hash: 'hash',
+        role_id: 'role-trainer',
+        role_name: 'trainer',
+        role_display_name: 'Course Trainer',
+        must_reset_password: 1,
+        is_active: 1,
+        last_login_at: null,
+        deactivated_at: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      });
+
+      const res = await request(app)
+        .post('/api/users')
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .send({
+          fullName: 'Phone User',
+          email: 'phoneuser@omishtu.com',
+          phone: '+251 91 234 5678',
+          password: 'ValidPassword123!',
+          role: 'trainer',
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.data.phone).toBe('+251912345678');
+    });
+
+    it('accepts user creation without phone (null/empty)', async () => {
+      vi.spyOn(usersRepository, 'findStaffByEmail').mockResolvedValueOnce(null);
+      vi.spyOn(usersRepository, 'findRoleByName').mockResolvedValueOnce({
+        id: 'role-receptionist',
+        name: 'receptionist',
+        display_name: 'Receptionist',
+        description: null,
+      });
+      vi.spyOn(usersRepository, 'createStaff').mockResolvedValueOnce();
+      vi.spyOn(usersRepository, 'findStaffById').mockResolvedValueOnce({
+        id: 'nophone-test-id',
+        full_name: 'No Phone User',
+        email: 'nophone@omishtu.com',
+        phone: null,
+        password_hash: 'hash',
+        role_id: 'role-receptionist',
+        role_name: 'receptionist',
+        role_display_name: 'Receptionist',
+        must_reset_password: 1,
+        is_active: 1,
+        last_login_at: null,
+        deactivated_at: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      });
+
+      const res = await request(app)
+        .post('/api/users')
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .send({
+          fullName: 'No Phone User',
+          email: 'nophone@omishtu.com',
+          password: 'ValidPassword123!',
+          role: 'receptionist',
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.data.phone).toBeNull();
+    });
   });
 });

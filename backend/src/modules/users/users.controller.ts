@@ -50,18 +50,17 @@ export async function getStaffStats(_req: Request, res: Response): Promise<void>
 }
 
 export async function createStaff(req: Request, res: Response): Promise<void> {
-  const { fullName, email, role } = req.body as CreateStaffInput;
+  const { full_name, fullName, email, phone, password, role } = req.body as CreateStaffInput;
 
   try {
-    const result = await usersService.createStaff({ fullName, email, role });
-    sendSuccess(
-      res,
-      {
-        staff: result.staff,
-        temporaryPassword: result.temporaryPassword,
-      },
-      201
-    );
+    const staff = await usersService.createStaff({
+      fullName: full_name ?? fullName,
+      email,
+      phone,
+      password,
+      role,
+    });
+    sendSuccess(res, staff, 201);
   } catch (err: unknown) {
     const errorWithStatus = err as { statusCode?: number; code?: string; message?: string };
     const statusCode = errorWithStatus.statusCode || 500;

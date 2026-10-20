@@ -66,6 +66,9 @@ export async function updateStaffApi(id: string, payload: UpdateStaffPayload): P
   if (payload.fullName !== undefined || payload.full_name !== undefined) {
     body.full_name = payload.fullName ?? payload.full_name;
   }
+  if (payload.phone !== undefined) {
+    body.phone = payload.phone;
+  }
   if (payload.role !== undefined) {
     body.role = payload.role;
   }

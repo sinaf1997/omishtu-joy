@@ -4,6 +4,7 @@ export interface StaffRecord {
   id: string;
   full_name: string;
   email: string;
+  phone: string | null;
   password_hash: string;
   role_id: string;
   role_name: StaffRole;
@@ -41,6 +42,7 @@ export interface StaffMember {
   full_name: string;
   fullName: string;
   email: string;
+  phone: string | null;
   roleId: string;
   role_id?: string;
   role: StaffRole;
@@ -75,6 +77,7 @@ export interface CreateStaffData {
   id: string;
   fullName: string;
   email: string;
+  phone?: string | null;
   passwordHash: string;
   roleId: string;
   mustResetPassword?: boolean;

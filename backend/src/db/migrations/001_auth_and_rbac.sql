@@ -44,6 +44,7 @@ CREATE TABLE IF NOT EXISTS staff (
   id VARCHAR(36) NOT NULL,
   full_name VARCHAR(150) NOT NULL,
   email VARCHAR(255) NOT NULL,
+  phone VARCHAR(30) NULL,
   password_hash VARCHAR(255) NOT NULL,
   role_id VARCHAR(36) NOT NULL,
   must_reset_password TINYINT(1) NOT NULL DEFAULT 1,

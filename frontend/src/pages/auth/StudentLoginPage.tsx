@@ -46,12 +46,7 @@ export const StudentLoginPage: React.FC = () => {
 
     setLoading(true);
     try {
-      const user = await loginStudent({ studentCode: cleanCode, password });
-
-      if (user.mustResetPassword) {
-        navigate('/change-password', { replace: true });
-        return;
-      }
+      await loginStudent({ studentCode: cleanCode, password });
 
       // Check for redirected path from route guard or default to student dashboard
       const intendedPath = (location.state as { from?: { pathname: string } })?.from?.pathname;

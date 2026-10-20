@@ -44,7 +44,7 @@ export class UsersRepository {
   async findStaffByEmail(email: string): Promise<StaffRecord | null> {
     const pool = getDatabasePool();
     const [rows] = await pool.query<(RowDataPacket & StaffRecord)[]>(
-      `SELECT s.id, s.full_name, s.email, s.password_hash, s.role_id,
+      `SELECT s.id, s.full_name, s.email, s.phone, s.password_hash, s.role_id,
               r.name AS role_name, r.display_name AS role_display_name,
               s.must_reset_password, s.is_active, s.last_login_at, s.deactivated_at,
               s.created_at, s.updated_at
@@ -64,7 +64,7 @@ export class UsersRepository {
   async findStaffById(id: string): Promise<StaffRecord | null> {
     const pool = getDatabasePool();
     const [rows] = await pool.query<(RowDataPacket & StaffRecord)[]>(
-      `SELECT s.id, s.full_name, s.email, s.password_hash, s.role_id,
+      `SELECT s.id, s.full_name, s.email, s.phone, s.password_hash, s.role_id,
               r.name AS role_name, r.display_name AS role_display_name,
               s.must_reset_password, s.is_active, s.last_login_at, s.deactivated_at,
               s.created_at, s.updated_at
@@ -175,7 +175,7 @@ export class UsersRepository {
   async listStaff(): Promise<StaffRecord[]> {
     const pool = getDatabasePool();
     const [rows] = await pool.query<(RowDataPacket & StaffRecord)[]>(
-      `SELECT s.id, s.full_name, s.email, s.password_hash, s.role_id,
+      `SELECT s.id, s.full_name, s.email, s.phone, s.password_hash, s.role_id,
               r.name AS role_name, r.display_name AS role_display_name,
               s.must_reset_password, s.is_active, s.last_login_at, s.deactivated_at,
               s.created_at, s.updated_at
@@ -193,8 +193,8 @@ export class UsersRepository {
 
     if (filters.search && filters.search.trim().length > 0) {
       const term = `%${filters.search.toLowerCase().trim()}%`;
-      conditions.push('(LOWER(s.full_name) LIKE ? OR LOWER(s.email) LIKE ?)');
-      params.push(term, term);
+      conditions.push('(LOWER(s.full_name) LIKE ? OR LOWER(s.email) LIKE ? OR LOWER(s.phone) LIKE ?)');
+      params.push(term, term, term);
     }
 
     if (filters.role && filters.role !== 'all') {
@@ -226,7 +226,7 @@ export class UsersRepository {
     const offset = (page - 1) * limit;
 
     const [rows] = await pool.query<(RowDataPacket & StaffRecord)[]>(
-      `SELECT s.id, s.full_name, s.email, s.password_hash, s.role_id,
+      `SELECT s.id, s.full_name, s.email, s.phone, s.password_hash, s.role_id,
               r.name AS role_name, r.display_name AS role_display_name,
               s.must_reset_password, s.is_active, s.last_login_at, s.deactivated_at,
               s.created_at, s.updated_at
@@ -247,12 +247,13 @@ export class UsersRepository {
   async createStaff(data: CreateStaffData): Promise<void> {
     const pool = getDatabasePool();
     await pool.query<ResultSetHeader>(
-      `INSERT INTO staff (id, full_name, email, password_hash, role_id, must_reset_password, is_active)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO staff (id, full_name, email, phone, password_hash, role_id, must_reset_password, is_active)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         data.id,
         data.fullName.trim(),
         data.email.toLowerCase().trim(),
+        data.phone || null,
         data.passwordHash,
         data.roleId,
         data.mustResetPassword ? 1 : 0,
@@ -263,7 +264,7 @@ export class UsersRepository {
 
   async updateStaffProfile(
     id: string,
-    updates: { fullName?: string; roleId?: string; isActive?: boolean }
+    updates: { fullName?: string; phone?: string | null; roleId?: string; isActive?: boolean }
   ): Promise<void> {
     const pool = getDatabasePool();
     const setClauses: string[] = [];
@@ -272,6 +273,11 @@ export class UsersRepository {
     if (updates.fullName !== undefined) {
       setClauses.push('full_name = ?');
       params.push(updates.fullName.trim());
+    }
+
+    if (updates.phone !== undefined) {
+      setClauses.push('phone = ?');
+      params.push(updates.phone || null);
     }
 
     if (updates.roleId !== undefined) {

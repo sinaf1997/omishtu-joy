@@ -39,6 +39,8 @@ import {
   ChevronLeft,
   ChevronRight,
   ShieldAlert,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 
 const ASSIGNABLE_ROLES: { value: StaffRole; label: string }[] = [
@@ -49,9 +51,35 @@ const ASSIGNABLE_ROLES: { value: StaffRole; label: string }[] = [
   { value: 'manager', label: 'Operations Manager' },
 ];
 
+const cleanPhone = (val: string) => val.replace(/[\s-]/g, '');
+const isPhoneValid = (val: string) => {
+  if (!val) return true;
+  if (!/^\+?[0-9\s-]+$/.test(val)) return false;
+  const digits = cleanPhone(val).replace(/\D/g, '');
+  return digits.length >= 7 && digits.length <= 20;
+};
+
 const addUserSchema = z.object({
-  fullName: z.string().min(2, 'Full name must be at least 2 characters').max(150),
-  email: z.string().email('Please enter a valid email address'),
+  fullName: z
+    .string()
+    .trim()
+    .min(2, 'Full name must be at least 2 characters')
+    .max(150, 'Full name cannot exceed 150 characters'),
+  email: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .email('Please enter a valid email address'),
+  phone: z
+    .string()
+    .trim()
+    .optional()
+    .refine((val) => !val || isPhoneValid(val), {
+      message: 'Phone must contain 7 to 20 digits (optional leading +, spaces, dashes)',
+    }),
+  password: z
+    .string()
+    .min(8, 'Password must be at least 8 characters long'),
   role: z.enum(['receptionist', 'academic_admin', 'trainer', 'accountant', 'manager'], {
     errorMap: () => ({ message: 'Please select a valid role' }),
   }),
@@ -82,16 +110,32 @@ export const OwnerUsersPage: React.FC = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [selectedRole, setSelectedRole] = useState<StaffRole>('trainer');
   const [addSubmitting, setAddSubmitting] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
+  const [addErrors, setAddErrors] = useState<{
+    fullName?: string;
+    email?: string;
+    phone?: string;
+    password?: string;
+    role?: string;
+  }>({});
 
   // Edit User Modal State
   const [editingUser, setEditingUser] = useState<StaffMemberRecord | null>(null);
   const [editFullName, setEditFullName] = useState('');
+  const [editPhone, setEditPhone] = useState('');
   const [editRole, setEditRole] = useState<StaffRole>('trainer');
   const [editSubmitting, setEditSubmitting] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
+  const [editErrors, setEditErrors] = useState<{
+    fullName?: string;
+    phone?: string;
+    role?: string;
+  }>({});
 
   // Confirm Status Change (Activate / Deactivate) Modal State
   const [confirmStatusUser, setConfirmStatusUser] = useState<StaffMemberRecord | null>(null);
@@ -150,44 +194,53 @@ export const OwnerUsersPage: React.FC = () => {
   const handleAddSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setAddError(null);
+    setAddErrors({});
 
     const validation = addUserSchema.safeParse({
       fullName: fullName.trim(),
       email: email.trim().toLowerCase(),
+      phone: phone.trim() || undefined,
+      password, // Password is never trimmed
       role: selectedRole,
     });
 
     if (!validation.success) {
-      setAddError(validation.error.errors[0]?.message || 'Validation error');
+      const fieldErrors: Record<string, string> = {};
+      for (const issue of validation.error.issues) {
+        const fieldName = issue.path[0] as string;
+        if (!fieldErrors[fieldName]) {
+          fieldErrors[fieldName] = issue.message;
+        }
+      }
+      setAddErrors(fieldErrors);
       return;
     }
 
     setAddSubmitting(true);
     try {
-      const result = await createStaffApi({
+      await createStaffApi({
         fullName: fullName.trim(),
         email: email.trim().toLowerCase(),
+        phone: phone.trim() ? cleanPhone(phone.trim()) : null,
+        password, // Password is never trimmed
         role: selectedRole,
       });
 
       setShowAddModal(false);
       setFullName('');
       setEmail('');
+      setPhone('');
+      setPassword('');
       setSelectedRole('trainer');
-
-      setTempPasswordModal({
-        userName: result.staff.fullName,
-        userEmail: result.staff.email,
-        tempPassword: result.temporaryPassword,
-        actionType: 'created',
-      });
+      setAddErrors({});
+      setAddError(null);
 
       fetchUsersData();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'response' in err) {
         const axiosError = err as { response?: { status?: number; data?: { error?: { message?: string } } } };
         if (axiosError.response?.status === 409) {
-          setAddError('A user with this email address already exists.');
+          setAddErrors({ email: 'A user with this email already exists' });
         } else {
           setAddError(axiosError.response?.data?.error?.message || 'Failed to add user');
         }
@@ -201,11 +254,12 @@ export const OwnerUsersPage: React.FC = () => {
     }
   };
 
-  // Handle Edit User Submit (name & role)
+  // Handle Edit User Submit (name, phone & role)
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingUser) return;
     setEditError(null);
+    setEditErrors({});
 
     if (editingUser.id === currentOwner?.id) {
       setEditError('You cannot change or demote your own owner role.');
@@ -213,7 +267,12 @@ export const OwnerUsersPage: React.FC = () => {
     }
 
     if (editFullName.trim().length < 2) {
-      setEditError('Full name must be at least 2 characters long');
+      setEditErrors({ fullName: 'Full name must be at least 2 characters long' });
+      return;
+    }
+
+    if (editPhone.trim() && !isPhoneValid(editPhone.trim())) {
+      setEditErrors({ phone: 'Phone must contain 7 to 20 digits (optional leading +, spaces, dashes)' });
       return;
     }
 
@@ -221,6 +280,7 @@ export const OwnerUsersPage: React.FC = () => {
     try {
       await updateStaffApi(editingUser.id, {
         fullName: editFullName.trim(),
+        phone: editPhone.trim() ? cleanPhone(editPhone.trim()) : null,
         role: editRole,
       });
 
@@ -329,6 +389,13 @@ export const OwnerUsersPage: React.FC = () => {
           <Button
             onClick={() => {
               setAddError(null);
+              setAddErrors({});
+              setFullName('');
+              setEmail('');
+              setPhone('');
+              setPassword('');
+              setShowPassword(false);
+              setSelectedRole('trainer');
               setShowAddModal(true);
             }}
             className="rounded-full gap-2 text-xs font-semibold shadow-sm"
@@ -522,6 +589,7 @@ export const OwnerUsersPage: React.FC = () => {
                       <tr>
                         <th className="py-3 px-6">Name</th>
                         <th className="py-3 px-6">Email</th>
+                        <th className="py-3 px-6">Phone</th>
                         <th className="py-3 px-6">Role</th>
                         <th className="py-3 px-6">Status</th>
                         <th className="py-3 px-6">Last Login</th>
@@ -548,6 +616,10 @@ export const OwnerUsersPage: React.FC = () => {
                               {userItem.email}
                             </td>
 
+                            <td className="py-3.5 px-6 text-xs text-muted-foreground font-mono">
+                              {userItem.phone || '—'}
+                            </td>
+
                             <td className="py-3.5 px-6">
                               <Badge variant="outline" className="text-xs capitalize font-medium bg-card text-foreground">
                                 {userItem.role.replace('_', ' ')}
@@ -572,7 +644,7 @@ export const OwnerUsersPage: React.FC = () => {
 
                             <td className="py-3.5 px-6 text-right">
                               <div className="flex items-center justify-end gap-1.5">
-                                {/* Edit User (Name & Role) */}
+                                {/* Edit User (Name, Phone & Role) */}
                                 <Button
                                   size="sm"
                                   variant="ghost"
@@ -581,8 +653,10 @@ export const OwnerUsersPage: React.FC = () => {
                                   onClick={() => {
                                     setEditingUser(userItem);
                                     setEditFullName(userItem.fullName);
+                                    setEditPhone(userItem.phone || '');
                                     setEditRole(userItem.role as StaffRole);
                                     setEditError(null);
+                                    setEditErrors({});
                                   }}
                                   className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground"
                                 >
@@ -734,10 +808,10 @@ export const OwnerUsersPage: React.FC = () => {
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-foreground leading-tight">
-                    Add user
+                    Add new user
                   </h3>
                   <p className="text-xs text-muted-foreground">
-                    Generates a temporary password with mandatory password reset
+                    Grant dashboard access to a team member.
                   </p>
                 </div>
               </div>
@@ -758,6 +832,7 @@ export const OwnerUsersPage: React.FC = () => {
                 </div>
               )}
 
+              {/* 1. Full Name */}
               <div className="space-y-1.5">
                 <Label htmlFor="add-full-name" className="text-xs font-semibold text-foreground">
                   Full Name
@@ -765,55 +840,131 @@ export const OwnerUsersPage: React.FC = () => {
                 <Input
                   id="add-full-name"
                   type="text"
-                  placeholder="e.g. Maria Gonzalez"
+                  placeholder="E.g. Samuel Green"
                   value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
+                  onChange={(e) => {
+                    setFullName(e.target.value);
+                    setAddErrors((prev) => ({ ...prev, fullName: undefined }));
+                  }}
                   disabled={addSubmitting}
                   required
                 />
+                {addErrors.fullName && (
+                  <p className="text-[11px] text-destructive font-medium">{addErrors.fullName}</p>
+                )}
               </div>
 
+              {/* 2. Email */}
               <div className="space-y-1.5">
                 <Label htmlFor="add-email" className="text-xs font-semibold text-foreground">
-                  Email Address
+                  Email
                 </Label>
                 <Input
                   id="add-email"
                   type="email"
-                  placeholder="maria@omishtu.com"
+                  placeholder="E.g. samuel@example.com"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    setAddErrors((prev) => ({ ...prev, email: undefined }));
+                  }}
                   disabled={addSubmitting}
                   required
                 />
+                {addErrors.email && (
+                  <p className="text-[11px] text-destructive font-medium">{addErrors.email}</p>
+                )}
               </div>
 
+              {/* 3. Phone (Optional) */}
+              <div className="space-y-1.5">
+                <Label htmlFor="add-phone" className="text-xs font-semibold text-foreground">
+                  Phone <span className="text-muted-foreground font-normal">(Optional)</span>
+                </Label>
+                <Input
+                  id="add-phone"
+                  type="text"
+                  placeholder="E.g. +251 91 234 5678"
+                  value={phone}
+                  onChange={(e) => {
+                    setPhone(e.target.value);
+                    setAddErrors((prev) => ({ ...prev, phone: undefined }));
+                  }}
+                  disabled={addSubmitting}
+                />
+                {addErrors.phone && (
+                  <p className="text-[11px] text-destructive font-medium">{addErrors.phone}</p>
+                )}
+              </div>
+
+              {/* 4. Password */}
+              <div className="space-y-1.5">
+                <Label htmlFor="add-password" className="text-xs font-semibold text-foreground">
+                  Password
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="add-password"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="Enter user password (min. 8 characters)"
+                    value={password}
+                    onChange={(e) => {
+                      setPassword(e.target.value); // NEVER trim password
+                      setAddErrors((prev) => ({ ...prev, password: undefined }));
+                    }}
+                    disabled={addSubmitting}
+                    className="pr-10"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus:outline-none"
+                    tabIndex={-1}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                {addErrors.password && (
+                  <p className="text-[11px] text-destructive font-medium">{addErrors.password}</p>
+                )}
+              </div>
+
+              {/* 5. Role */}
               <div className="space-y-1.5">
                 <Label htmlFor="add-role" className="text-xs font-semibold text-foreground">
-                  User Role
+                  Role
                 </Label>
                 <select
                   id="add-role"
                   value={selectedRole}
-                  onChange={(e) => setSelectedRole(e.target.value as StaffRole)}
+                  onChange={(e) => {
+                    setSelectedRole(e.target.value as StaffRole);
+                    setAddErrors((prev) => ({ ...prev, role: undefined }));
+                  }}
                   disabled={addSubmitting}
                   className="w-full h-9 rounded-md border border-input bg-card px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring text-foreground font-medium"
                 >
                   {ASSIGNABLE_ROLES.map((r) => (
                     <option key={r.value} value={r.value}>
-                      {r.label} ({r.value})
+                      {r.label}
                     </option>
                   ))}
                 </select>
                 <p className="text-[11px] text-muted-foreground">
-                  * Owner role cannot be provisioned or selected.
+                  * Owner role cannot be assigned.
                 </p>
+                {addErrors.role && (
+                  <p className="text-[11px] text-destructive font-medium">{addErrors.role}</p>
+                )}
               </div>
 
+              {/* Footer */}
               <div className="pt-3 border-t border-border flex items-center justify-end gap-3">
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="ghost"
                   onClick={() => setShowAddModal(false)}
                   disabled={addSubmitting}
                   className="rounded-full text-xs"
@@ -833,7 +984,7 @@ export const OwnerUsersPage: React.FC = () => {
         </div>
       )}
 
-      {/* 5. Edit User Modal (Name & Role) */}
+      {/* 5. Edit User Modal (Name, Phone & Role) */}
       {editingUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-foreground/30 backdrop-blur-sm">
           <div className="bg-card w-full max-w-md rounded-2xl border border-border shadow-2xl p-6 space-y-5 animate-in fade-in-50 zoom-in-95">
@@ -843,7 +994,7 @@ export const OwnerUsersPage: React.FC = () => {
                   Edit user
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  Update name and role for {editingUser.email}
+                  Update name, phone, and role for {editingUser.email}
                 </p>
               </div>
               <button
@@ -871,10 +1022,36 @@ export const OwnerUsersPage: React.FC = () => {
                   id="edit-full-name"
                   type="text"
                   value={editFullName}
-                  onChange={(e) => setEditFullName(e.target.value)}
+                  onChange={(e) => {
+                    setEditFullName(e.target.value);
+                    setEditErrors((prev) => ({ ...prev, fullName: undefined }));
+                  }}
                   disabled={editSubmitting}
                   required
                 />
+                {editErrors.fullName && (
+                  <p className="text-[11px] text-destructive font-medium">{editErrors.fullName}</p>
+                )}
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-phone" className="text-xs font-semibold text-foreground">
+                  Phone <span className="text-muted-foreground font-normal">(Optional)</span>
+                </Label>
+                <Input
+                  id="edit-phone"
+                  type="text"
+                  placeholder="E.g. +251 91 234 5678"
+                  value={editPhone}
+                  onChange={(e) => {
+                    setEditPhone(e.target.value);
+                    setEditErrors((prev) => ({ ...prev, phone: undefined }));
+                  }}
+                  disabled={editSubmitting}
+                />
+                {editErrors.phone && (
+                  <p className="text-[11px] text-destructive font-medium">{editErrors.phone}</p>
+                )}
               </div>
 
               <div className="space-y-1.5">
@@ -884,7 +1061,10 @@ export const OwnerUsersPage: React.FC = () => {
                 <select
                   id="edit-role-select"
                   value={editRole}
-                  onChange={(e) => setEditRole(e.target.value as StaffRole)}
+                  onChange={(e) => {
+                    setEditRole(e.target.value as StaffRole);
+                    setEditErrors((prev) => ({ ...prev, role: undefined }));
+                  }}
                   disabled={editSubmitting}
                   className="w-full h-9 rounded-md border border-input bg-card px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring text-foreground font-medium"
                 >
@@ -897,12 +1077,15 @@ export const OwnerUsersPage: React.FC = () => {
                 <p className="text-[11px] text-muted-foreground">
                   * Owner role cannot be assigned.
                 </p>
+                {editErrors.role && (
+                  <p className="text-[11px] text-destructive font-medium">{editErrors.role}</p>
+                )}
               </div>
 
               <div className="pt-3 border-t border-border flex items-center justify-end gap-3">
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="ghost"
                   onClick={() => setEditingUser(null)}
                   disabled={editSubmitting}
                   className="rounded-full text-xs"
