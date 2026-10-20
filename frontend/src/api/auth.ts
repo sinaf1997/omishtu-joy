@@ -35,6 +35,16 @@ export async function changePasswordApi(payload: ChangePasswordPayload): Promise
   return response.data.data;
 }
 
+export async function updateProfileApi(fullName: string): Promise<User> {
+  const response = await apiClient.patch<ApiResponse<User>>('/auth/profile', {
+    full_name: fullName,
+  });
+  if (!response.data.data) {
+    throw new Error(response.data.error?.message || 'Failed to update profile');
+  }
+  return response.data.data;
+}
+
 export async function getMeApi(): Promise<User> {
   const response = await apiClient.get<ApiResponse<User>>('/auth/me');
   if (!response.data.data) {

@@ -3,15 +3,18 @@ import {
   loginStaff,
   loginStudent,
   changePassword,
+  updateProfile,
   getMe,
 } from './auth.controller.js';
 import {
   staffLoginSchema,
   studentLoginSchema,
   changePasswordSchema,
+  updateProfileSchema,
 } from './auth.schema.js';
 import { validateRequest } from '../../middleware/validate.js';
 import { authGuard } from '../../middleware/authenticate.js';
+import { requirePortal } from '../../middleware/authorize.js';
 import { loginRateLimiter } from '../../middleware/rate-limiter.js';
 
 const router = Router();
@@ -38,6 +41,15 @@ router.post(
   authGuard,
   validateRequest({ body: changePasswordSchema }),
   changePassword
+);
+
+// Staff profile update (self only)
+router.patch(
+  '/profile',
+  authGuard,
+  requirePortal('staff'),
+  validateRequest({ body: updateProfileSchema }),
+  updateProfile
 );
 
 // Session inspection

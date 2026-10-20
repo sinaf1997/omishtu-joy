@@ -6,10 +6,33 @@ import {
   UpdateStaffInput,
 } from './users.schema.js';
 
-export async function listStaff(_req: Request, res: Response): Promise<void> {
+export async function listStaff(req: Request, res: Response): Promise<void> {
   try {
-    const staffList = await usersService.listStaff();
-    sendSuccess(res, staffList);
+    const { search, role, status, page, limit } = req.query as {
+      search?: string;
+      role?: string;
+      status?: string;
+      page?: string;
+      limit?: string;
+    };
+
+    const parsedPage = page ? parseInt(page, 10) : undefined;
+    const parsedLimit = limit ? parseInt(limit, 10) : undefined;
+
+    const result = await usersService.listStaff({
+      search,
+      role,
+      status,
+      page: parsedPage,
+      limit: parsedLimit,
+    });
+
+    sendSuccess(res, result.users, 200, {
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: result.totalPages,
+    });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Failed to list staff accounts';
     sendError(res, message, 500, 'INTERNAL_SERVER_ERROR');

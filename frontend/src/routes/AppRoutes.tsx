@@ -23,7 +23,8 @@ import { ForbiddenPage } from '../pages/ForbiddenPage.js';
 import { NotFoundPage } from '../pages/NotFoundPage.js';
 import { ComingSoonPage } from '../pages/ComingSoonPage.js';
 
-// Staff Dashboards
+// Staff Dashboards & Profile
+import { MyProfilePage } from '../pages/staff/MyProfilePage.js';
 import { OwnerDashboard } from '../pages/staff/OwnerDashboard.js';
 import { OwnerUsersPage } from '../pages/staff/OwnerUsersPage.js';
 import { ReceptionDashboard } from '../pages/staff/ReceptionDashboard.js';
@@ -65,6 +66,9 @@ export const AppRoutes: React.FC = () => {
         <Route element={<PortalRoute portal="staff" />}>
           <Route path="/staff" element={<StaffLayout />}>
             <Route index element={<StaffRoleRedirect />} />
+
+            {/* My Profile Page - Accessible to all staff roles */}
+            <Route path="profile" element={<MyProfilePage />} />
 
             {/* Owner Role Only */}
             <Route element={<RoleRoute allowedRoles={['owner']} />}>

@@ -18,9 +18,10 @@ import {
   UserCog,
   Activity,
   TrendingUp,
+  User,
 } from 'lucide-react';
 
-export type NavSection = 'OVERVIEW' | 'STUDENTS' | 'ACADEMICS' | 'FINANCE' | 'ADMIN';
+export type NavSection = 'OVERVIEW' | 'STUDENTS' | 'ACADEMICS' | 'FINANCE' | 'ADMIN' | 'ACCOUNT';
 
 export interface NavItem {
   id: string;
@@ -263,6 +264,18 @@ export const NAVIGATION_ITEMS: NavItem[] = [
     sprint: 9,
     isFunctional: false,
   },
+
+  // ACCOUNT
+  {
+    id: 'account-profile',
+    label: 'My Profile',
+    path: '/staff/profile',
+    section: 'ACCOUNT',
+    icon: User,
+    allowedRoles: ['owner', 'receptionist', 'academic_admin', 'trainer', 'accountant', 'manager'],
+    sprint: 1,
+    isFunctional: true,
+  },
 ];
 
 export const NAV_SECTIONS: NavSection[] = [
@@ -271,6 +284,7 @@ export const NAV_SECTIONS: NavSection[] = [
   'ACADEMICS',
   'FINANCE',
   'ADMIN',
+  'ACCOUNT',
 ];
 
 export function getNavItemsForRole(role: StaffRole): Record<NavSection, NavItem[]> {
@@ -280,6 +294,7 @@ export function getNavItemsForRole(role: StaffRole): Record<NavSection, NavItem[
     ACADEMICS: [],
     FINANCE: [],
     ADMIN: [],
+    ACCOUNT: [],
   };
 
   const allowed = NAVIGATION_ITEMS.filter((item) => item.allowedRoles.includes(role));

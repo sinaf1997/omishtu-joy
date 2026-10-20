@@ -129,7 +129,12 @@ export const StaffLayout: React.FC = () => {
         {/* Bottom User Card */}
         <div className="p-3 border-t border-border shrink-0 bg-card">
           <div className="p-2 rounded-xl bg-secondary/60 border border-border flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5 min-w-0">
+            <Link
+              to="/staff/profile"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-2.5 min-w-0 flex-1 hover:opacity-85 transition-opacity"
+              title="My Profile"
+            >
               <div className="h-9 w-9 rounded-full bg-primary text-primary-foreground font-bold flex items-center justify-center text-xs shrink-0 shadow-sm">
                 {initials}
               </div>
@@ -141,7 +146,7 @@ export const StaffLayout: React.FC = () => {
                   {user?.email}
                 </p>
               </div>
-            </div>
+            </Link>
             <button
               onClick={handleLogout}
               title="Sign Out"
@@ -190,7 +195,11 @@ export const StaffLayout: React.FC = () => {
             </button>
 
             {/* User Profile Pill */}
-            <div className="flex items-center gap-2 pl-2 border-l border-border">
+            <Link
+              to="/staff/profile"
+              className="flex items-center gap-2 pl-2 border-l border-border hover:opacity-85 transition-opacity"
+              title="My Profile"
+            >
               <div className="h-8 w-8 rounded-full bg-secondary text-primary font-bold flex items-center justify-center text-xs">
                 {initials}
               </div>
@@ -202,7 +211,7 @@ export const StaffLayout: React.FC = () => {
                   {role.replace('_', ' ')}
                 </span>
               </div>
-            </div>
+            </Link>
           </div>
         </header>
 

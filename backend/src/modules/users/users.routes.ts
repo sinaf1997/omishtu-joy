@@ -11,6 +11,7 @@ import {
   createStaffSchema,
   updateStaffSchema,
   userIdParamsSchema,
+  listUsersQuerySchema,
 } from './users.schema.js';
 import { authGuard } from '../../middleware/authenticate.js';
 import { requireRole, requirePortal } from '../../middleware/authorize.js';
@@ -23,9 +24,9 @@ router.use(authGuard);
 router.use(requirePortal('staff'));
 router.use(requireRole('owner'));
 
-router.get('/', listStaff);
 router.get('/stats', getStaffStats);
 router.get('/roles', listRoles);
+router.get('/', validateRequest({ query: listUsersQuerySchema }), listStaff);
 router.post('/', validateRequest({ body: createStaffSchema }), createStaff);
 router.patch(
   '/:id',
@@ -51,3 +52,12 @@ router.patch(
 );
 
 export { router as usersRouter };
+
+// Dedicated router for GET /api/roles
+const rolesRouter = Router();
+rolesRouter.use(authGuard);
+rolesRouter.use(requirePortal('staff'));
+rolesRouter.use(requireRole('owner'));
+rolesRouter.get('/', listRoles);
+
+export { rolesRouter };
