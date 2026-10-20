@@ -44,8 +44,8 @@ export const ChangePasswordPage: React.FC = () => {
       return;
     }
 
-    if (newPassword.length < 6) {
-      setErrorMessage('New password must be at least 6 characters long');
+    if (newPassword.length < 8) {
+      setErrorMessage('New password must be at least 8 characters long');
       return;
     }
 
@@ -55,13 +55,13 @@ export const ChangePasswordPage: React.FC = () => {
     }
 
     if (currentPassword === newPassword) {
-      setErrorMessage('Your new password must be different from your current temporary password');
+      setErrorMessage('New password must differ from current password');
       return;
     }
 
     setLoading(true);
     try {
-      const updatedUser = await changePassword({ currentPassword, newPassword });
+      const updatedUser = await changePassword({ currentPassword, newPassword, confirmPassword });
 
       if (updatedUser.portal === 'student') {
         navigate('/student/dashboard', { replace: true });
@@ -151,7 +151,7 @@ export const ChangePasswordPage: React.FC = () => {
                   <Input
                     id="new-password"
                     type={showPassword ? 'text' : 'password'}
-                    placeholder="Minimum 6 characters"
+                    placeholder="Minimum 8 characters"
                     className="pl-9"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}

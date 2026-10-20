@@ -5,6 +5,7 @@ import {
   StaffLoginInput,
   StudentLoginInput,
   ChangePasswordInput,
+  UpdateProfileInput,
 } from './auth.schema.js';
 
 export async function loginStaff(req: Request, res: Response): Promise<void> {
@@ -56,6 +57,25 @@ export async function changePassword(req: Request, res: Response): Promise<void>
     const statusCode = errorWithStatus.statusCode || 500;
     const errorCode = errorWithStatus.code || 'PASSWORD_CHANGE_FAILED';
     sendError(res, errorWithStatus.message || 'Password change failed', statusCode, errorCode);
+  }
+}
+
+export async function updateProfile(req: Request, res: Response): Promise<void> {
+  if (!req.user || req.user.portal !== 'staff') {
+    sendError(res, 'Staff authentication required', 401, 'UNAUTHORIZED');
+    return;
+  }
+
+  const { full_name } = req.body as UpdateProfileInput;
+
+  try {
+    const updatedUser = await authService.updateStaffProfile(req.user.id, full_name);
+    sendSuccess(res, updatedUser);
+  } catch (err: unknown) {
+    const errorWithStatus = err as { statusCode?: number; code?: string; message?: string };
+    const statusCode = errorWithStatus.statusCode || 500;
+    const errorCode = errorWithStatus.code || 'PROFILE_UPDATE_FAILED';
+    sendError(res, errorWithStatus.message || 'Failed to update profile', statusCode, errorCode);
   }
 }
 

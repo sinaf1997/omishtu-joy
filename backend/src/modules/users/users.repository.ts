@@ -8,7 +8,39 @@ import {
   StaffStats,
 } from './users.types.js';
 
+export interface ListStaffFilters {
+  search?: string;
+  role?: string;
+  status?: string;
+  page?: number;
+  limit?: number;
+}
+
 export class UsersRepository {
+  async isStaffActive(id: string): Promise<boolean> {
+    const pool = getDatabasePool();
+    const [rows] = await pool.query<(RowDataPacket & { is_active: number })[]>(
+      `SELECT is_active FROM staff WHERE id = ? LIMIT 1`,
+      [id]
+    );
+    if (rows.length === 0) {
+      return true;
+    }
+    return Boolean(rows[0].is_active);
+  }
+
+  async isStudentActive(id: string): Promise<boolean> {
+    const pool = getDatabasePool();
+    const [rows] = await pool.query<(RowDataPacket & { is_active: number })[]>(
+      `SELECT is_active FROM students WHERE id = ? LIMIT 1`,
+      [id]
+    );
+    if (rows.length === 0) {
+      return true;
+    }
+    return Boolean(rows[0].is_active);
+  }
+
   async findStaffByEmail(email: string): Promise<StaffRecord | null> {
     const pool = getDatabasePool();
     const [rows] = await pool.query<(RowDataPacket & StaffRecord)[]>(
@@ -111,10 +143,33 @@ export class UsersRepository {
 
   async listRoles(): Promise<RoleRecord[]> {
     const pool = getDatabasePool();
-    const [rows] = await pool.query<(RowDataPacket & RoleRecord)[]>(
-      `SELECT id, name, display_name, description FROM roles ORDER BY name ASC`
+    const [rows] = await pool.query<(RowDataPacket & RoleRecord & { user_count: number })[]>(
+      `SELECT r.id, r.name, r.display_name, r.description,
+              COUNT(s.id) AS user_count
+       FROM roles r
+       LEFT JOIN staff s ON s.role_id = r.id
+       GROUP BY r.id, r.name, r.display_name, r.description
+       ORDER BY r.name ASC`
     );
-    return rows as RoleRecord[];
+    return rows.map((r) => ({
+      id: r.id,
+      name: r.name,
+      display_name: r.display_name,
+      description: r.description,
+      user_count: Number(r.user_count) || 0,
+      userCount: Number(r.user_count) || 0,
+    }));
+  }
+
+  async countActiveOwners(): Promise<number> {
+    const pool = getDatabasePool();
+    const [rows] = await pool.query<(RowDataPacket & { total: number })[]>(
+      `SELECT COUNT(*) AS total
+       FROM staff s
+       INNER JOIN roles r ON s.role_id = r.id
+       WHERE r.name = 'owner' AND s.is_active = 1`
+    );
+    return Number(rows[0]?.total) || 0;
   }
 
   async listStaff(): Promise<StaffRecord[]> {
@@ -131,6 +186,64 @@ export class UsersRepository {
     return rows as StaffRecord[];
   }
 
+  async listStaffPaginated(filters: ListStaffFilters): Promise<{ staff: StaffRecord[]; total: number }> {
+    const pool = getDatabasePool();
+    const conditions: string[] = [];
+    const params: unknown[] = [];
+
+    if (filters.search && filters.search.trim().length > 0) {
+      const term = `%${filters.search.toLowerCase().trim()}%`;
+      conditions.push('(LOWER(s.full_name) LIKE ? OR LOWER(s.email) LIKE ?)');
+      params.push(term, term);
+    }
+
+    if (filters.role && filters.role !== 'all') {
+      conditions.push('r.name = ?');
+      params.push(filters.role);
+    }
+
+    if (filters.status === 'active') {
+      conditions.push('s.is_active = 1');
+    } else if (filters.status === 'inactive') {
+      conditions.push('s.is_active = 0');
+    }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    // Count total matching
+    const [countRows] = await pool.query<(RowDataPacket & { total: number })[]>(
+      `SELECT COUNT(*) AS total
+       FROM staff s
+       INNER JOIN roles r ON s.role_id = r.id
+       ${whereClause}`,
+      params
+    );
+    const total = Number(countRows[0]?.total) || 0;
+
+    // Apply pagination
+    const page = Math.max(1, filters.page || 1);
+    const limit = Math.max(1, filters.limit || 10);
+    const offset = (page - 1) * limit;
+
+    const [rows] = await pool.query<(RowDataPacket & StaffRecord)[]>(
+      `SELECT s.id, s.full_name, s.email, s.password_hash, s.role_id,
+              r.name AS role_name, r.display_name AS role_display_name,
+              s.must_reset_password, s.is_active, s.last_login_at, s.deactivated_at,
+              s.created_at, s.updated_at
+       FROM staff s
+       INNER JOIN roles r ON s.role_id = r.id
+       ${whereClause}
+       ORDER BY s.created_at DESC
+       LIMIT ? OFFSET ?`,
+      [...params, limit, offset]
+    );
+
+    return {
+      staff: rows as StaffRecord[],
+      total,
+    };
+  }
+
   async createStaff(data: CreateStaffData): Promise<void> {
     const pool = getDatabasePool();
     await pool.query<ResultSetHeader>(
@@ -145,6 +258,42 @@ export class UsersRepository {
         data.mustResetPassword ? 1 : 0,
         data.isActive ? 1 : 0,
       ]
+    );
+  }
+
+  async updateStaffProfile(
+    id: string,
+    updates: { fullName?: string; roleId?: string; isActive?: boolean }
+  ): Promise<void> {
+    const pool = getDatabasePool();
+    const setClauses: string[] = [];
+    const params: unknown[] = [];
+
+    if (updates.fullName !== undefined) {
+      setClauses.push('full_name = ?');
+      params.push(updates.fullName.trim());
+    }
+
+    if (updates.roleId !== undefined) {
+      setClauses.push('role_id = ?');
+      params.push(updates.roleId);
+    }
+
+    if (updates.isActive !== undefined) {
+      setClauses.push('is_active = ?');
+      params.push(updates.isActive ? 1 : 0);
+      setClauses.push('deactivated_at = ?');
+      params.push(updates.isActive ? null : new Date());
+    }
+
+    if (setClauses.length === 0) return;
+
+    setClauses.push('updated_at = CURRENT_TIMESTAMP');
+    params.push(id);
+
+    await pool.query<ResultSetHeader>(
+      `UPDATE staff SET ${setClauses.join(', ')} WHERE id = ?`,
+      params
     );
   }
 

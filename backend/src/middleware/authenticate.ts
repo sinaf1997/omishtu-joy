@@ -3,8 +3,9 @@ import jwt from 'jsonwebtoken';
 import { env } from '../config/env.js';
 import { UserJwtPayload } from '../types/index.js';
 import { sendError } from '../utils/api-response.js';
+import { usersRepository } from '../modules/users/users.repository.js';
 
-export function authGuard(req: Request, res: Response, next: NextFunction): void {
+export async function authGuard(req: Request, res: Response, next: NextFunction): Promise<void> {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -20,6 +21,22 @@ export function authGuard(req: Request, res: Response, next: NextFunction): void
     if (!decoded.id || !decoded.role || !decoded.portal) {
       sendError(res, 'Invalid authentication token payload', 401, 'INVALID_TOKEN');
       return;
+    }
+
+    // Check is_active in database:
+    // A deactivated user's token stops working on the next request.
+    if (decoded.portal === 'staff') {
+      const active = await usersRepository.isStaffActive(decoded.id);
+      if (!active) {
+        sendError(res, 'Staff account is deactivated or inactive', 403, 'ACCOUNT_INACTIVE');
+        return;
+      }
+    } else {
+      const active = await usersRepository.isStudentActive(decoded.id);
+      if (!active) {
+        sendError(res, 'Student account is deactivated or inactive', 403, 'ACCOUNT_INACTIVE');
+        return;
+      }
     }
 
     req.user = {

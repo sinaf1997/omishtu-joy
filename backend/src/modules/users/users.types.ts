@@ -32,21 +32,32 @@ export interface RoleRecord {
   name: StaffRole;
   display_name: string;
   description: string | null;
+  user_count?: number;
+  userCount?: number;
 }
 
 export interface StaffMember {
   id: string;
+  full_name: string;
   fullName: string;
   email: string;
   roleId: string;
+  role_id?: string;
   role: StaffRole;
   roleDisplayName: string;
+  role_display_name?: string;
   mustResetPassword: boolean;
+  must_reset_password: boolean;
   isActive: boolean;
+  is_active: boolean;
   lastLoginAt: string | null;
-  deactivatedAt: string | null;
+  last_login_at: string | null;
+  deactivatedAt?: string | null;
+  deactivated_at?: string | null;
   createdAt: string;
-  updatedAt: string;
+  created_at: string;
+  updatedAt?: string;
+  updated_at?: string;
 }
 
 export interface StudentMember {

@@ -12,6 +12,7 @@ import {
   loginStaffApi,
   loginStudentApi,
   changePasswordApi,
+  updateProfileApi,
   getMeApi,
 } from '../api/auth.js';
 import {
@@ -48,6 +49,7 @@ export interface AuthContextType {
   loginStaff: (credentials: StaffLoginCredentials) => Promise<User>;
   loginStudent: (credentials: StudentLoginCredentials) => Promise<User>;
   changePassword: (payload: ChangePasswordPayload) => Promise<User>;
+  updateProfile: (fullName: string) => Promise<User>;
   logout: () => void;
   restoreSession: () => Promise<void>;
 }
@@ -111,6 +113,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return data.user;
   };
 
+  const updateProfile = async (fullName: string): Promise<User> => {
+    const updatedUser = await updateProfileApi(fullName);
+    setUser(updatedUser);
+    return updatedUser;
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -122,6 +130,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         loginStaff,
         loginStudent,
         changePassword,
+        updateProfile,
         logout,
         restoreSession,
       }}

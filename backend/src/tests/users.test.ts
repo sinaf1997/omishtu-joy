@@ -64,10 +64,10 @@ describe('Owner Staff Management & RBAC Protection', () => {
     });
   });
 
-  it('GET /api/roles returns all 6 system roles', async () => {
+  it('GET /api/roles returns all 6 system roles with user counts', async () => {
     vi.spyOn(usersRepository, 'listRoles').mockResolvedValue([
-      { id: 'role-owner', name: 'owner', display_name: 'Center Owner', description: 'Governance' },
-      { id: 'role-manager', name: 'manager', display_name: 'Operations Manager', description: 'Oversight' },
+      { id: 'role-owner', name: 'owner', display_name: 'Center Owner', description: 'Governance', user_count: 1, userCount: 1 },
+      { id: 'role-manager', name: 'manager', display_name: 'Operations Manager', description: 'Oversight', user_count: 2, userCount: 2 },
     ]);
 
     const res = await request(app)
@@ -77,6 +77,42 @@ describe('Owner Staff Management & RBAC Protection', () => {
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(res.body.data.length).toBeGreaterThan(0);
+    expect(res.body.data[0]).toHaveProperty('user_count');
+  });
+
+  it('GET /api/users returns paginated staff with filters', async () => {
+    vi.spyOn(usersRepository, 'listStaffPaginated').mockResolvedValue({
+      staff: [
+        {
+          id: 'staff-1',
+          full_name: 'Alice Trainer',
+          email: 'alice@omishtu.com',
+          password_hash: 'hash',
+          role_id: 'role-trainer',
+          role_name: 'trainer',
+          role_display_name: 'Course Trainer',
+          must_reset_password: 0,
+          is_active: 1,
+          last_login_at: null,
+          deactivated_at: null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+      ],
+      total: 1,
+    });
+
+    const res = await request(app)
+      .get('/api/users?search=alice&role=trainer&status=active&page=1&limit=10')
+      .set('Authorization', `Bearer ${ownerToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(Array.isArray(res.body.data)).toBe(true);
+    expect(res.body.data[0].email).toBe('alice@omishtu.com');
+    expect(res.body.data[0]).not.toHaveProperty('password_hash');
+    expect(res.body.data[0]).not.toHaveProperty('passwordHash');
+    expect(res.body.meta).toHaveProperty('total', 1);
   });
 
   it('POST /api/users prevents creating another owner account', async () => {
@@ -148,6 +184,165 @@ describe('Owner Staff Management & RBAC Protection', () => {
 
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe('CANNOT_DEACTIVATE_SELF');
+  });
+
+  it('PATCH /api/users/:id prevents owner from demoting or changing their own role', async () => {
+    vi.spyOn(usersRepository, 'findStaffById').mockResolvedValueOnce({
+      id: 'owner-id-123',
+      full_name: 'Owner Alexander',
+      email: 'owner@gmail.com',
+      password_hash: 'hash',
+      role_id: 'role-owner',
+      role_name: 'owner',
+      role_display_name: 'Center Owner',
+      must_reset_password: 1,
+      is_active: 1,
+      last_login_at: null,
+      deactivated_at: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+
+    const res = await request(app)
+      .patch('/api/users/owner-id-123')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ role: 'manager' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('CANNOT_DEMOTE_SELF');
+  });
+
+  it('PATCH /api/users/:id rejects unknown fields (strict Zod validation)', async () => {
+    const res = await request(app)
+      .patch('/api/users/staff-123')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ full_name: 'Valid Name', illegalField: 'hacker' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+  });
+
+  it('PATCH /api/users/:id prevents assigning the owner role to any user', async () => {
+    vi.spyOn(usersRepository, 'findStaffById').mockResolvedValueOnce({
+      id: 'staff-456',
+      full_name: 'Trainer Elena',
+      email: 'trainer@omishtu.com',
+      password_hash: 'hash',
+      role_id: 'role-trainer',
+      role_name: 'trainer',
+      role_display_name: 'Course Trainer',
+      must_reset_password: 0,
+      is_active: 1,
+      last_login_at: null,
+      deactivated_at: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+
+    const res = await request(app)
+      .patch('/api/users/staff-456')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ role: 'owner' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('INVALID_ROLE');
+  });
+
+  it('PATCH /api/users/:id successfully updates full_name and role', async () => {
+    const originalStaff = {
+      id: 'staff-456',
+      full_name: 'Trainer Elena',
+      email: 'trainer@omishtu.com',
+      password_hash: 'hash',
+      role_id: 'role-trainer',
+      role_name: 'trainer' as const,
+      role_display_name: 'Course Trainer',
+      must_reset_password: 0,
+      is_active: 1,
+      last_login_at: null,
+      deactivated_at: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    const updatedStaff = {
+      ...originalStaff,
+      full_name: 'Elena Rostova',
+      role_id: 'role-manager',
+      role_name: 'manager' as const,
+      role_display_name: 'Operations Manager',
+    };
+
+    vi.spyOn(usersRepository, 'findStaffById')
+      .mockResolvedValueOnce(originalStaff)
+      .mockResolvedValueOnce(updatedStaff);
+    vi.spyOn(usersRepository, 'findRoleByName').mockResolvedValueOnce({
+      id: 'role-manager',
+      name: 'manager',
+      display_name: 'Operations Manager',
+      description: null,
+    });
+    vi.spyOn(usersRepository, 'updateStaffProfile').mockResolvedValueOnce();
+
+    const res = await request(app)
+      .patch('/api/users/staff-456')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ full_name: 'Elena Rostova', role: 'manager' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.fullName).toBe('Elena Rostova');
+    expect(res.body.data.role).toBe('manager');
+    expect(res.body.data).not.toHaveProperty('password_hash');
+    expect(res.body.data).not.toHaveProperty('passwordHash');
+  });
+
+  it('PATCH /api/users/:id deactivates and reactivates user', async () => {
+    const activeStaff = {
+      id: 'staff-789',
+      full_name: 'John Doe',
+      email: 'john@omishtu.com',
+      password_hash: 'hash',
+      role_id: 'role-trainer',
+      role_name: 'trainer' as const,
+      role_display_name: 'Course Trainer',
+      must_reset_password: 0,
+      is_active: 1,
+      last_login_at: null,
+      deactivated_at: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    const inactiveStaff = {
+      ...activeStaff,
+      is_active: 0,
+      deactivated_at: new Date().toISOString(),
+    };
+
+    vi.spyOn(usersRepository, 'findStaffById')
+      .mockResolvedValueOnce(activeStaff)
+      .mockResolvedValueOnce(inactiveStaff);
+    vi.spyOn(usersRepository, 'updateStaffProfile').mockResolvedValueOnce();
+
+    const res = await request(app)
+      .patch('/api/users/staff-789')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ is_active: false });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.isActive).toBe(false);
+  });
+
+  it('authGuard blocks any existing token for a deactivated user on the next request', async () => {
+    vi.spyOn(usersRepository, 'isStaffActive').mockResolvedValueOnce(false);
+
+    const res = await request(app)
+      .get('/api/users/stats')
+      .set('Authorization', `Bearer ${ownerToken}`);
+
+    expect(res.status).toBe(403);
+    expect(res.body.error.code).toBe('ACCOUNT_INACTIVE');
   });
 
   it('POST /api/users/:id/reset-password generates a temporary password and flags account', async () => {
