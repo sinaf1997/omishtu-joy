@@ -30,7 +30,7 @@ import {
   Palette,
 } from 'lucide-react';
 
-function getInitials(name?: string, email?: string): string {
+function getInitials(name?: string | null, email?: string | null): string {
   if (name && name.trim().length > 0) {
     const parts = name.trim().split(' ');
     if (parts.length >= 2) {

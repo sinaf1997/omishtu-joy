@@ -38,6 +38,8 @@ export const ChangePasswordPage: React.FC = () => {
   useEffect(() => {
     if (user?.portal === 'staff') {
       navigate('/staff/profile', { replace: true });
+    } else if (user?.portal === 'student') {
+      navigate('/student/profile?reset=1', { replace: true });
     }
   }, [user, navigate]);
 

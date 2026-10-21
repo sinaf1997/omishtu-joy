@@ -24,6 +24,14 @@ export async function listStudentsApi(params?: ListStudentsParams): Promise<List
   };
 }
 
+export async function getStudentByIdApi(id: string): Promise<StudentRecord> {
+  const response = await apiClient.get<ApiResponse<StudentRecord>>(`/students/${id}`);
+  if (!response.data.data) {
+    throw new Error(response.data.error?.message || 'Failed to fetch student details');
+  }
+  return response.data.data;
+}
+
 export async function getStudentStatsApi(): Promise<StudentStats> {
   const response = await apiClient.get<ApiResponse<StudentStats>>('/students/stats');
   if (!response.data.data) {

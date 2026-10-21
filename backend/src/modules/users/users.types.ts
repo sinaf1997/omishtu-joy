@@ -20,6 +20,16 @@ export interface StaffRecord {
 export interface StudentRecord {
   id: string;
   student_code: string;
+  first_name?: string;
+  last_name?: string;
+  gender?: 'male' | 'female' | null;
+  date_of_birth?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  address?: string | null;
+  city?: string | null;
+  registered_by_staff_id?: string | null;
+  registered_at?: string | null;
   password_hash: string;
   must_reset_password: number | boolean;
   is_active: number | boolean;
@@ -58,19 +68,8 @@ export interface StaffMember {
   deactivated_at?: string | null;
   createdAt: string;
   created_at: string;
-  updatedAt?: string;
-  updated_at?: string;
-}
-
-export interface StudentMember {
-  id: string;
-  studentCode: string;
-  role: 'student';
-  mustResetPassword: boolean;
-  isActive: boolean;
-  lastLoginAt: string | null;
-  createdAt: string;
   updatedAt: string;
+  updated_at: string;
 }
 
 export interface CreateStaffData {
@@ -87,6 +86,6 @@ export interface CreateStaffData {
 export interface StaffStats {
   totalStaff: number;
   activeStaff: number;
-  inactiveStaff: number;
-  totalRoles: number;
+  deactivatedStaff: number;
+  rolesBreakdown: Record<StaffRole, number>;
 }
