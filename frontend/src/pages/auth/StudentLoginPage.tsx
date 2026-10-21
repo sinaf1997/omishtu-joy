@@ -47,7 +47,12 @@ export const StudentLoginPage: React.FC = () => {
 
     setLoading(true);
     try {
-      await loginStudent({ studentCode: cleanCode, password });
+      const loggedInUser = await loginStudent({ studentCode: cleanCode, password });
+
+      if (loggedInUser.mustResetPassword) {
+        navigate('/student/profile?reset=1', { replace: true });
+        return;
+      }
 
       // Check for redirected path from route guard or default to student dashboard
       const intendedPath = (location.state as { from?: { pathname: string } })?.from?.pathname;
@@ -117,7 +122,7 @@ export const StudentLoginPage: React.FC = () => {
                   <Input
                     id="student-id"
                     type="text"
-                    placeholder="e.g. STD-2026-001"
+                    placeholder="otc/00001/26"
                     className="pl-9 font-mono"
                     value={studentCode}
                     onChange={(e) => setStudentCode(e.target.value)}

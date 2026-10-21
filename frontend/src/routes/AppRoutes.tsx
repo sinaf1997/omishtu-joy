@@ -27,15 +27,21 @@ import { ComingSoonPage } from '../pages/ComingSoonPage.js';
 import { MyProfilePage } from '../pages/staff/MyProfilePage.js';
 import { OwnerDashboard } from '../pages/staff/OwnerDashboard.js';
 import { OwnerUsersPage } from '../pages/staff/OwnerUsersPage.js';
-import { StudentsPage } from '../pages/staff/StudentsPage.js';
 import { ReceptionDashboard } from '../pages/staff/ReceptionDashboard.js';
 import { AcademicsDashboard } from '../pages/staff/AcademicsDashboard.js';
 import { TrainerDashboard } from '../pages/staff/TrainerDashboard.js';
 import { AccountingDashboard } from '../pages/staff/AccountingDashboard.js';
 import { ManagerDashboard } from '../pages/staff/ManagerDashboard.js';
 
-// Student Dashboard
+// Sprint 2: Student Management Pages (Staff/Receptionist Side)
+import { StudentListPage } from '../pages/staff/StudentListPage.js';
+import { StudentRegistrationPage } from '../pages/staff/StudentRegistrationPage.js';
+import { StudentDetailPage } from '../pages/staff/StudentDetailPage.js';
+import { StudentSlipPage } from '../pages/staff/StudentSlipPage.js';
+
+// Student Portal Pages
 import { StudentDashboard } from '../pages/student/StudentDashboard.js';
+import { StudentProfilePage } from '../pages/student/StudentProfilePage.js';
 
 // Helper component to redirect root /staff to the current staff role's dashboard
 const StaffRoleRedirect: React.FC = () => {
@@ -106,9 +112,19 @@ export const AppRoutes: React.FC = () => {
               <Route path="reception" element={<ReceptionDashboard />} />
             </Route>
 
-            {/* Students Management (Owner, Manager, Receptionist, Academic Admin) */}
-            <Route element={<RoleRoute allowedRoles={['owner', 'manager', 'receptionist', 'academic_admin']} />}>
-              <Route path="students" element={<StudentsPage />} />
+            {/* Sprint 2: Students Management (Owner, Manager, Academic Admin, Receptionist, Accountant) */}
+            <Route
+              element={
+                <RoleRoute
+                  allowedRoles={['owner', 'manager', 'receptionist', 'academic_admin', 'accountant']}
+                />
+              }
+            >
+              <Route path="reception/students" element={<StudentListPage />} />
+              <Route path="reception/students/new" element={<StudentRegistrationPage />} />
+              <Route path="reception/students/:id" element={<StudentDetailPage />} />
+              <Route path="reception/students/:id/slip" element={<StudentSlipPage />} />
+              <Route path="students" element={<Navigate to="/staff/reception/students" replace />} />
             </Route>
 
             {/* Shared Coming Soon Routes for Planned Sprints */}
@@ -134,6 +150,7 @@ export const AppRoutes: React.FC = () => {
           <Route path="/student" element={<StudentLayout />}>
             <Route index element={<Navigate to="/student/dashboard" replace />} />
             <Route path="dashboard" element={<StudentDashboard />} />
+            <Route path="profile" element={<StudentProfilePage />} />
           </Route>
         </Route>
       </Route>

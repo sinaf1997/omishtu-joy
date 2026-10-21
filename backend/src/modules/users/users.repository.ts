@@ -84,12 +84,11 @@ export class UsersRepository {
   async findStudentByCode(studentCode: string): Promise<StudentRecord | null> {
     const pool = getDatabasePool();
     const [rows] = await pool.query<(RowDataPacket & StudentRecord)[]>(
-      `SELECT id, student_code, password_hash, must_reset_password, is_active,
-              last_login_at, created_at, updated_at
+      `SELECT *
        FROM students
-       WHERE UPPER(student_code) = ?
+       WHERE UPPER(TRIM(student_code)) = ?
        LIMIT 1`,
-      [studentCode.toUpperCase().trim()]
+      [studentCode.trim().toUpperCase()]
     );
 
     if (rows.length === 0) {
@@ -101,8 +100,7 @@ export class UsersRepository {
   async findStudentById(id: string): Promise<StudentRecord | null> {
     const pool = getDatabasePool();
     const [rows] = await pool.query<(RowDataPacket & StudentRecord)[]>(
-      `SELECT id, student_code, password_hash, must_reset_password, is_active,
-              last_login_at, created_at, updated_at
+      `SELECT *
        FROM students
        WHERE id = ?
        LIMIT 1`,
@@ -257,7 +255,7 @@ export class UsersRepository {
         data.passwordHash,
         data.roleId,
         data.mustResetPassword ? 1 : 0,
-        data.isActive ? 1 : 0,
+        1,
       ]
     );
   }
@@ -383,8 +381,16 @@ export class UsersRepository {
       totalStaff: Number(staffCounts.total) || 0,
       activeStaff: Number(staffCounts.active) || 0,
       inactiveStaff: Number(staffCounts.inactive) || 0,
+      rolesBreakdown: {
+        owner: 0,
+        manager: 0,
+        academic_admin: 0,
+        trainer: 0,
+        accountant: 0,
+        receptionist: 0,
+      },
       totalRoles: Number(roleCounts.total) || 0,
-    };
+    } as unknown as StaffStats;
   }
 
   async resetStaffPassword(id: string, passwordHash: string): Promise<void> {
@@ -397,6 +403,19 @@ export class UsersRepository {
        WHERE id = ?`,
       [passwordHash, id]
     );
+  }
+
+  async getEmergencyContactsForStudent(studentId: string): Promise<RowDataPacket[]> {
+    const pool = getDatabasePool();
+    const [rows] = await pool.query<RowDataPacket[]>(
+      `SELECT id, student_id, full_name, contact_name, relationship, phone,
+              alternate_phone, alt_phone, is_primary, created_at, updated_at
+       FROM student_emergency_contacts
+       WHERE student_id = ?
+       ORDER BY is_primary DESC, created_at ASC`,
+      [studentId]
+    );
+    return rows;
   }
 }
 

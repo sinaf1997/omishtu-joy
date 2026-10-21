@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import {
   listStudents,
+  getStudentById,
   getStudentStats,
   createStudent,
   toggleStudentStatus,
@@ -10,19 +11,19 @@ import {
   listStudentsQuerySchema,
 } from './students.schema.js';
 import { authGuard } from '../../middleware/authenticate.js';
-import { requireRole, requirePortal } from '../../middleware/authorize.js';
+import { requirePortal, requirePermission } from '../../middleware/authorize.js';
 import { validateRequest } from '../../middleware/validate.js';
 
 const router = Router();
 
-// Student administration routes accessible to staff roles: owner, manager, receptionist, academic_admin
+// Student administration routes guarded by permissions: students:read, students:create
 router.use(authGuard);
 router.use(requirePortal('staff'));
-router.use(requireRole(['owner', 'manager', 'receptionist', 'academic_admin']));
 
-router.get('/stats', getStudentStats);
-router.get('/', validateRequest({ query: listStudentsQuerySchema }), listStudents);
-router.post('/', validateRequest({ body: createStudentSchema }), createStudent);
-router.patch('/:id/status', toggleStudentStatus);
+router.get('/stats', requirePermission('students:read'), getStudentStats);
+router.get('/', requirePermission('students:read'), validateRequest({ query: listStudentsQuerySchema }), listStudents);
+router.get('/:id', requirePermission('students:read'), getStudentById);
+router.post('/', requirePermission('students:create'), validateRequest({ body: createStudentSchema }), createStudent);
+router.patch('/:id/status', requirePermission('students:edit', 'students:create'), toggleStudentStatus);
 
 export { router as studentsRouter };

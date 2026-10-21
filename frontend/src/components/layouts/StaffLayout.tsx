@@ -13,7 +13,7 @@ import {
   X,
 } from 'lucide-react';
 
-function getInitials(name?: string, email?: string): string {
+function getInitials(name?: string | null, email?: string | null): string {
   if (name && name.trim().length > 0) {
     const parts = name.trim().split(' ');
     if (parts.length >= 2) {
@@ -96,6 +96,7 @@ export const StaffLayout: React.FC = () => {
                   const Icon = item.icon;
                   return (
                     <NavLink
+                      end={item.section === 'OVERVIEW'}
                       key={item.id}
                       to={item.path}
                       onClick={() => setMobileMenuOpen(false)}

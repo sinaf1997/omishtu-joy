@@ -1,12 +1,37 @@
 import jwt, { SignOptions } from 'jsonwebtoken';
+import { RowDataPacket } from 'mysql2/promise';
 import { env } from '../../config/env.js';
 import { usersRepository } from '../users/users.repository.js';
 import { comparePassword, hashPassword } from '../../utils/password.js';
-import { UserJwtPayload, PortalType, AuthUser } from '../../types/index.js';
+import { UserJwtPayload, PortalType, AuthUser, EmergencyContactInfo } from '../../types/index.js';
 
 export interface AuthSessionResponse {
   token: string;
   user: AuthUser;
+}
+
+function formatContacts(rows: RowDataPacket[]): EmergencyContactInfo[] {
+  return rows.map((r) => {
+    const isPrimary = Boolean(r.is_primary);
+    const fullName = r.full_name || r.contact_name || '';
+    const alt = r.alternate_phone || r.alt_phone || null;
+
+    return {
+      id: r.id,
+      studentId: r.student_id,
+      student_id: r.student_id,
+      fullName,
+      full_name: fullName,
+      relationship: r.relationship,
+      phone: r.phone,
+      alternatePhone: alt,
+      alternate_phone: alt,
+      isPrimary,
+      is_primary: isPrimary,
+      createdAt: r.created_at,
+      created_at: r.created_at,
+    };
+  });
 }
 
 export class AuthService {
@@ -58,6 +83,7 @@ export class AuthService {
         fullName: staff.full_name,
         full_name: staff.full_name,
         email: staff.email,
+        phone: staff.phone,
         role: staff.role_name,
         role_name: staff.role_name,
         roleDisplayName: staff.role_display_name,
@@ -76,7 +102,8 @@ export class AuthService {
   }
 
   async loginStudent(studentCode: string, password: string): Promise<AuthSessionResponse> {
-    const student = await usersRepository.findStudentByCode(studentCode);
+    const cleanCode = studentCode.trim();
+    const student = await usersRepository.findStudentByCode(cleanCode);
 
     // Generic error message for both non-existent student ID and wrong password
     const invalidCredentialsError = new Error('Invalid Student ID or password');
@@ -109,11 +136,31 @@ export class AuthService {
       mustResetPassword: mustReset,
     });
 
+    const firstName = student.first_name || '';
+    const lastName = student.last_name || '';
+    const fullName = `${firstName} ${lastName}`.trim() || student.student_code;
+
     return {
       token,
       user: {
         id: student.id,
         studentCode: student.student_code,
+        student_code: student.student_code,
+        fullName,
+        full_name: fullName,
+        firstName,
+        first_name: firstName,
+        lastName,
+        last_name: lastName,
+        gender: student.gender || null,
+        dateOfBirth: student.date_of_birth ? String(student.date_of_birth).slice(0, 10) : null,
+        date_of_birth: student.date_of_birth ? String(student.date_of_birth).slice(0, 10) : null,
+        phone: student.phone || null,
+        email: student.email || null,
+        address: student.address || null,
+        city: student.city || null,
+        registeredAt: student.registered_at || null,
+        registered_at: student.registered_at || null,
         role: 'student',
         portal: 'student',
         mustResetPassword: mustReset,
@@ -185,6 +232,7 @@ export class AuthService {
           fullName: staffData.full_name,
           full_name: staffData.full_name,
           email: staffData.email,
+          phone: staffData.phone,
           role: staffData.role_name,
           role_name: staffData.role_name,
           roleDisplayName: staffData.role_display_name,
@@ -222,6 +270,8 @@ export class AuthService {
 
       const updated = await usersRepository.findStudentById(userId);
       const studentData = updated || student;
+      const contactRows = await usersRepository.getEmergencyContactsForStudent(userId);
+      const formattedContacts = formatContacts(contactRows);
 
       const token = this.generateToken({
         id: studentData.id,
@@ -230,11 +280,33 @@ export class AuthService {
         mustResetPassword: false,
       });
 
+      const firstName = studentData.first_name || '';
+      const lastName = studentData.last_name || '';
+      const fullName = `${firstName} ${lastName}`.trim() || studentData.student_code;
+
       return {
         token,
         user: {
           id: studentData.id,
           studentCode: studentData.student_code,
+          student_code: studentData.student_code,
+          fullName,
+          full_name: fullName,
+          firstName,
+          first_name: firstName,
+          lastName,
+          last_name: lastName,
+          gender: studentData.gender || null,
+          dateOfBirth: studentData.date_of_birth ? String(studentData.date_of_birth).slice(0, 10) : null,
+          date_of_birth: studentData.date_of_birth ? String(studentData.date_of_birth).slice(0, 10) : null,
+          phone: studentData.phone || null,
+          email: studentData.email || null,
+          address: studentData.address || null,
+          city: studentData.city || null,
+          registeredAt: studentData.registered_at || null,
+          registered_at: studentData.registered_at || null,
+          emergencyContacts: formattedContacts,
+          emergency_contacts: formattedContacts,
           role: 'student',
           portal: 'student',
           mustResetPassword: false,
@@ -271,6 +343,7 @@ export class AuthService {
       fullName: updated.full_name,
       full_name: updated.full_name,
       email: updated.email,
+      phone: updated.phone,
       role: updated.role_name,
       role_name: updated.role_name,
       roleDisplayName: updated.role_display_name,
@@ -302,6 +375,7 @@ export class AuthService {
         fullName: staff.full_name,
         full_name: staff.full_name,
         email: staff.email,
+        phone: staff.phone,
         role: staff.role_name,
         role_name: staff.role_name,
         roleDisplayName: staff.role_display_name,
@@ -325,9 +399,34 @@ export class AuthService {
         throw notFound;
       }
 
+      const contactRows = await usersRepository.getEmergencyContactsForStudent(userId);
+      const formattedContacts = formatContacts(contactRows);
+
+      const firstName = student.first_name || '';
+      const lastName = student.last_name || '';
+      const fullName = `${firstName} ${lastName}`.trim() || student.student_code;
+
       return {
         id: student.id,
         studentCode: student.student_code,
+        student_code: student.student_code,
+        fullName,
+        full_name: fullName,
+        firstName,
+        first_name: firstName,
+        lastName,
+        last_name: lastName,
+        gender: student.gender || null,
+        dateOfBirth: student.date_of_birth ? String(student.date_of_birth).slice(0, 10) : null,
+        date_of_birth: student.date_of_birth ? String(student.date_of_birth).slice(0, 10) : null,
+        phone: student.phone || null,
+        email: student.email || null,
+        address: student.address || null,
+        city: student.city || null,
+        registeredAt: student.registered_at || null,
+        registered_at: student.registered_at || null,
+        emergencyContacts: formattedContacts,
+        emergency_contacts: formattedContacts,
         role: 'student',
         portal: 'student',
         mustResetPassword: Boolean(student.must_reset_password),

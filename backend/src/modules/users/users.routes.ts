@@ -22,12 +22,12 @@ const router = Router();
 // Staff administration routes accessible to Owner and Receptionist
 router.use(authGuard);
 router.use(requirePortal('staff'));
-router.use(requireRole(['owner', 'receptionist']));
 
-router.get('/stats', getStaffStats);
-router.get('/roles', listRoles);
-router.get('/', validateRequest({ query: listUsersQuerySchema }), listStaff);
-router.post('/', validateRequest({ body: createStaffSchema }), createStaff);
+
+router.get('/stats', requireRole('owner'), getStaffStats);
+router.get('/roles', requireRole(['owner', 'receptionist']), listRoles);
+router.get('/', requireRole('owner'), validateRequest({ query: listUsersQuerySchema }), listStaff);
+router.post('/', requireRole(['owner', 'receptionist']), validateRequest({ body: createStaffSchema }), createStaff);
 
 // Modifying and resetting staff accounts is Owner-only
 router.patch(

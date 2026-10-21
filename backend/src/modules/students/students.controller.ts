@@ -34,6 +34,20 @@ export async function listStudents(req: Request, res: Response): Promise<void> {
   }
 }
 
+export async function getStudentById(req: Request, res: Response): Promise<void> {
+  const { id } = req.params;
+
+  try {
+    const student = await studentsService.getStudentById(id);
+    sendSuccess(res, student);
+  } catch (err: unknown) {
+    const errorWithStatus = err as { statusCode?: number; code?: string; message?: string };
+    const statusCode = errorWithStatus.statusCode || 500;
+    const errorCode = errorWithStatus.code || 'STUDENT_FETCH_FAILED';
+    sendError(res, errorWithStatus.message || 'Failed to retrieve student record', statusCode, errorCode);
+  }
+}
+
 export async function getStudentStats(_req: Request, res: Response): Promise<void> {
   try {
     const stats = await studentsService.getStudentStats();
@@ -45,33 +59,46 @@ export async function getStudentStats(_req: Request, res: Response): Promise<voi
 }
 
 export async function createStudent(req: Request, res: Response): Promise<void> {
-  const { student_code, studentCode, password } = req.body as CreateStudentInput;
-
   try {
-    const student = await studentsService.createStudent({
-      studentCode: student_code ?? studentCode,
-      password,
-    });
+    const student = await studentsService.createStudent(
+      req.body as CreateStudentInput,
+      req.user?.id
+    );
     sendSuccess(res, student, 201);
   } catch (err: unknown) {
-    const errorWithStatus = err as { statusCode?: number; code?: string; message?: string };
+    const errorWithStatus = err as {
+      statusCode?: number;
+      code?: string;
+      message?: string;
+      existingStudentId?: string;
+    };
     const statusCode = errorWithStatus.statusCode || 500;
     const errorCode = errorWithStatus.code || 'STUDENT_CREATE_ERROR';
-    sendError(res, errorWithStatus.message || 'Failed to create student account', statusCode, errorCode);
+    const details = errorWithStatus.existingStudentId
+      ? { existingStudentId: errorWithStatus.existingStudentId }
+      : undefined;
+
+    sendError(
+      res,
+      errorWithStatus.message || 'Failed to create student account',
+      statusCode,
+      errorCode,
+      details
+    );
   }
 }
 
 export async function toggleStudentStatus(req: Request, res: Response): Promise<void> {
   const { id } = req.params;
-  const { is_active, isActive } = req.body as { is_active?: boolean; isActive?: boolean };
+  const { is_active } = req.body as { is_active?: boolean };
 
   try {
-    const student = await studentsService.toggleStudentStatus(id, Boolean(is_active ?? isActive));
-    sendSuccess(res, student);
+    const updated = await studentsService.toggleStudentStatus(id, is_active);
+    sendSuccess(res, updated);
   } catch (err: unknown) {
     const errorWithStatus = err as { statusCode?: number; code?: string; message?: string };
     const statusCode = errorWithStatus.statusCode || 500;
-    const errorCode = errorWithStatus.code || 'STUDENT_UPDATE_ERROR';
+    const errorCode = errorWithStatus.code || 'STUDENT_STATUS_UPDATE_ERROR';
     sendError(res, errorWithStatus.message || 'Failed to update student status', statusCode, errorCode);
   }
 }

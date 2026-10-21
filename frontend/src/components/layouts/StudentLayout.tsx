@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, Outlet, useNavigate } from 'react-router-dom';
+import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth.js';
 import { Button } from '../ui/button.js';
 import { Badge } from '../ui/badge.js';
@@ -8,7 +8,8 @@ import {
   Layers,
   GraduationCap,
   LogOut,
-  KeyRound,
+  User,
+  LayoutDashboard,
   IdCard,
 } from 'lucide-react';
 
@@ -42,9 +43,45 @@ export const StudentLayout: React.FC = () => {
             </div>
           </Link>
 
+          {/* Center Navigation Links */}
+          <nav className="flex items-center gap-1 sm:gap-2">
+            <NavLink
+              to="/student/dashboard"
+              end
+              className={({ isActive }) =>
+                `flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                  isActive
+                    ? 'bg-primary text-primary-foreground shadow-sm font-semibold'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
+                }`
+              }
+            >
+              <LayoutDashboard className="h-3.5 w-3.5" />
+              <span>Dashboard</span>
+            </NavLink>
+            <NavLink
+              to="/student/profile"
+              end
+              className={({ isActive }) =>
+                `flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                  isActive
+                    ? 'bg-primary text-primary-foreground shadow-sm font-semibold'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
+                }`
+              }
+            >
+              <User className="h-3.5 w-3.5" />
+              <span>My Profile</span>
+            </NavLink>
+          </nav>
+
           {/* Right Navigation & User Badge */}
-          <div className="flex items-center gap-3 sm:gap-4">
-            <div className="hidden sm:flex items-center gap-2 bg-secondary px-3 py-1.5 rounded-full border border-border">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <Link
+              to="/student/profile"
+              className="hidden md:flex items-center gap-2 bg-secondary px-3 py-1.5 rounded-full border border-border hover:bg-accent transition-colors"
+              title="View My Profile"
+            >
               <IdCard className="h-3.5 w-3.5 text-primary" />
               <span className="text-xs font-semibold text-secondary-foreground font-mono">
                 {user?.studentCode || 'Student ID'}
@@ -52,16 +89,9 @@ export const StudentLayout: React.FC = () => {
               <Badge variant="outline" className="text-[10px] uppercase tracking-wider py-0 px-1.5 bg-card text-primary font-semibold">
                 Active Student
               </Badge>
-            </div>
+            </Link>
 
             <ThemeToggle />
-
-            <Link to="/change-password">
-              <Button variant="ghost" size="sm" className="hidden md:flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground">
-                <KeyRound className="h-3.5 w-3.5" />
-                <span>Security</span>
-              </Button>
-            </Link>
 
             <Button
               variant="outline"
