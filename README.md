@@ -400,7 +400,72 @@ DEALLOCATE PREPARE stmt_to_run;
 
 ---
 
-## 9. Branching Strategy
+## 9. Theming System
+
+Omishtu-Joy implements a dual-theme architecture supporting both **Light Theme** (the signature purple & white training center palette) and **Dark Theme** (a deep neutral-purple night palette engineered for low eye strain and high readability).
+
+### 9.1 Core Principles
+
+1. **Tokens Only — Zero Hardcoded Colors:** Components must never use literal color classes (e.g. `bg-white`, `text-black`, `bg-gray-100`, `text-slate-900`) or hardcoded hex/rgb/hsl literals. All styling must rely on semantic tokens:
+   - Surfaces: `bg-background`, `bg-card`, `bg-popover`, `bg-secondary`, `bg-muted`, `bg-accent`
+   - Typography: `text-foreground`, `text-card-foreground`, `text-muted-foreground`, `text-primary`, `text-secondary-foreground`
+   - Borders & Inputs: `border-border`, `border-input`, `ring-ring`
+   - Action & State: `bg-primary`, `text-primary-foreground`, `bg-destructive`, `text-destructive-foreground`, `bg-success`, `text-success`, `bg-warning`, `text-warning`
+2. **Class-Based Dark Mode:** Tailwind CSS 4 is configured with `@custom-variant dark (&:is(.dark *));` in `frontend/src/index.css`. Dark mode is toggled via the `.dark` class on `document.documentElement`.
+3. **No Wrong-Theme Flash:** An inline `<script>` in `<head>` of `index.html` inspects `localStorage` (`omishtu-theme`) and initial OS preference (`prefers-color-scheme: dark`) before React renders, setting the `.dark` class instantly to eliminate white flashes.
+4. **Direct Single-Click Toggle:** The `ThemeToggle` component renders a single accessible `<button type="button">` with rotating Moon/Sun icons that toggles directly between light and dark on click (with keyboard Enter/Space support and dynamic ARIA labels).
+5. **Print & PDF Preservation:** In `@media print`, all backgrounds, cards, and text tokens are strictly forced to the light theme so student certificates, tuition receipts, and invoices always print crisp and clear on white paper.
+
+### 9.2 How to Use `dark:` Variants
+
+When a component needs differentiated styling between light and dark that goes beyond standard CSS variable values (such as opacity, borders, or glowing effects), use Tailwind's `dark:` variant:
+
+```tsx
+<div className="border border-border bg-card shadow-sm dark:shadow-none dark:border-primary/30">
+  <p className="text-foreground">Semantic text</p>
+</div>
+```
+
+### 9.3 Adding a New Color Token for Both Themes
+
+To introduce a new semantic color token (e.g., `--info`):
+
+1. **Declare in `@theme` in `src/index.css`:**
+   ```css
+   @theme {
+     --color-info: var(--info);
+     --color-info-foreground: var(--info-foreground);
+   }
+   ```
+2. **Define in `:root` (Light Theme):**
+   ```css
+   :root {
+     --info: #0284C7;
+     --info-foreground: #FFFFFF;
+   }
+   ```
+3. **Define in `.dark` (Dark Theme):**
+   ```css
+   .dark {
+     --info: #38BDF8;
+     --info-foreground: #0F0C1B;
+   }
+   ```
+4. **Use as standard Tailwind utilities:** `bg-info`, `text-info-foreground`, `border-info/30`.
+
+### 9.4 Color Token Lint Script
+
+To prevent regressions and ensure no hardcoded colors enter the codebase, run:
+
+```bash
+npm run check:colors
+```
+
+This scans all `.tsx` and `.ts` source files across `frontend/src` for hex codes, rgb/hsl literals, and standard Tailwind color palette utilities (`slate`, `gray`, `zinc`, etc.), failing the build if any are introduced.
+
+---
+
+## 10. Branching Strategy
 
 Our team utilizes a streamlined Git workflow structured around feature sprints:
 
@@ -421,10 +486,12 @@ feature/sN-short-name       feature/sN-short-name
 
 ---
 
-## 10. Change Log
+## 11. Change Log
 
 | Date | Change | Who Needs to Act |
 |---|---|---|
+| **2026-10-21** | **Theme toggle switches light/dark directly on click**: Streamlined `ThemeToggle` to switch directly between light and dark themes with a single click (no dropdown/popover). Updated `ThemeContext` API with `toggleTheme()` and `isDark`. Updated My Profile appearance section to an accessible direct switch labeled "Dark mode". | All / Frontend |
+| **2026-10-21** | **Dark theme (light/dark/system) for staff and student portals**: Delivered complete dark mode across the entire Omishtu-Joy frontend (landing page, staff login, student login, change password, all 6 staff dashboards, student hub, tables, modals, cards, badges). Preserved light theme (purple + white) unchanged. Added shadcn/ui CSS variable `.dark` palette with deep neutral-purple night mode, WCAG AA readable contrast, and print light-theme overrides. Added `ThemeProvider`, zero-flash `<head>` script in `index.html`, `ThemeToggle` button on all layouts and auth pages, and automated `npm run check:colors` lint script enforcing 100% token usage with 0 hardcoded color classes. | All / Frontend |
 | **2026-10-20** | **Owner Users & Roles Modal & Staff Provisioning Refinement**: Updated 'Add new user' dialog on `/staff/owner/users` to strictly exclude branch concepts (Omishtu-Joy operates with no branches), and support owner-set password (with show/hide toggle, no visual bar/strength text line) and optional phone field. Validated via Zod on frontend and backend (full name 2–150 chars, email trimmed/lowercased, phone 7–20 digits cleaned, password min 8 characters untrimmed, owner role rejected). Updated `001_auth_and_rbac.sql` schema with `phone VARCHAR(30) NULL AFTER email`. Added 'Phone' column to users directory table ('—' when empty) and to 'Edit user' dialog. Removed temporary password modal on creation since owner sets credentials directly (retained for password reset). Updated test suite covering phone validation, password minimums, multi-role provisioning with and without phone numbers; all 52 backend integration tests verified passing. | All / Backend / Frontend |
 | **2026-10-20** | **Account section and My Profile page for all staff (update name, change password)**: Added ACCOUNT section to the staff sidebar navigation config (`src/config/navigation.ts`) with 'My Profile' icon (`User`) accessible to all six staff roles (`owner`, `receptionist`, `academic_admin`, `trainer`, `accountant`, `manager`). Linked the sidebar bottom user card and top bar profile pill to `/staff/profile`. Implemented `MyProfilePage` (`/staff/profile`) featuring live avatar initials preview, editable full name with change detection, read-only contact notes for email/role, metadata cards (status, last login, member since), and dedicated change password card with 8+ character validation, show/hide toggles, clear field errors, and non-blocking security banner auto-dismissal. Backend staff-only endpoints secured via `authGuard` + `requirePortal('staff')`: `PATCH /api/auth/profile` with strict Zod validation rejecting extra fields, `POST /api/auth/change-password` issuing fresh JWT and invalidating old password immediately, and enriched `GET /api/auth/me`. Student access strictly rejected with 403 / redirect. | All / Staff / Frontend / Backend |
 | **2026-10-20** | **Owner Side Cleanup & Real Data Integration**: Dashboard cleanup (removed 'New staff member' create button to focus purely on analytics, connected stat cards to `GET /api/users/stats`, recent accounts to `GET /api/users?limit=5`, loading skeletons, and empty state); 'Add user' rename on Users & Roles page (`/staff/owner/users`) across dialog titles, buttons, empty states, and UI text; all frontend mock/static data and fallback counts removed; real staff update endpoints wired (`PATCH /api/users/:id` accepting `full_name`, `role`, `is_active` with strict Zod validation, `POST /api/users/:id/reset-password` returning temporary password with 'Shown only once' modal, search/filter/pagination on staff table, roles list with real user counts from `GET /api/roles`, real-time `is_active` verification in `authGuard` invalidating tokens for deactivated accounts, server-side enforcement blocking self-deactivation/demotion and owner role assignment, at-least-one-active-owner rule). | All / Backend / Frontend |
@@ -444,7 +511,7 @@ feature/sN-short-name       feature/sN-short-name
 
 ---
 
-## 11. Contribution Rules
+## 12. Contribution Rules
 
 To keep the codebase maintainable, secure, and production-ready, all contributors must observe these engineering standards:
 

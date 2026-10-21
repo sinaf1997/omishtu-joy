@@ -3,6 +3,7 @@ import { Link, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth.js';
 import { Button } from '../ui/button.js';
 import { Badge } from '../ui/badge.js';
+import { ThemeToggle } from '../ThemeToggle.js';
 import {
   Layers,
   GraduationCap,
@@ -52,6 +53,8 @@ export const StudentLayout: React.FC = () => {
                 Active Student
               </Badge>
             </div>
+
+            <ThemeToggle />
 
             <Link to="/change-password">
               <Button variant="ghost" size="sm" className="hidden md:flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground">

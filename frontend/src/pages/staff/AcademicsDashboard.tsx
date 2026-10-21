@@ -3,7 +3,7 @@ import { useAuth } from '../../hooks/useAuth.js';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../../components/ui/card.js';
 import { Badge } from '../../components/ui/badge.js';
 import {
-  GraduationCap,
+
   Calendar,
   BookOpen,
   Award,

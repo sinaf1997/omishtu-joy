@@ -4,6 +4,7 @@ import { useAuth } from '../../hooks/useAuth.js';
 import { Button } from '../ui/button.js';
 import { Badge } from '../ui/badge.js';
 import { Shield, Layers, LogIn, LogOut, User as UserIcon } from 'lucide-react';
+import { ThemeToggle } from '../ThemeToggle.js';
 
 export const AppLayout: React.FC = () => {
   const { user, isAuthenticated, logout } = useAuth();
@@ -52,7 +53,7 @@ export const AppLayout: React.FC = () => {
                   >
                     Student Portal
                   </Link>
-                  {(user?.role === 'admin' || user?.role === 'staff' || user?.role === 'owner' || user?.role === 'manager') && (
+                  {(user?.role === 'owner' || user?.role === 'manager') && (
                     <Link
                       to="/staff"
                       className={`px-3 py-1.5 rounded-md transition-colors ${
@@ -69,7 +70,8 @@ export const AppLayout: React.FC = () => {
             </nav>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <ThemeToggle />
             {isAuthenticated && user ? (
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2 text-sm bg-secondary px-3 py-1 rounded-full border border-border">

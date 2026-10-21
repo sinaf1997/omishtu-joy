@@ -17,6 +17,7 @@
     "typecheck": "npm run typecheck --workspace=backend && npm run typecheck --workspace=frontend",
     "typecheck:backend": "npm run typecheck --workspace=backend",
     "typecheck:frontend": "npm run typecheck --workspace=frontend",
+    "check:colors": "npm run check:colors --workspace=frontend",
     "test": "npm run test --workspace=backend",
     "migrate": "npm run migrate --workspace=backend",
     "seed": "npm run seed --workspace=backend",

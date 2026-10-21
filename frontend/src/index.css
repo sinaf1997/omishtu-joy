@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:is(.dark *));
+
 @theme {
   /* Brand palette direct tokens */
   --color-primary-purple: #6D28D9;
@@ -34,12 +36,37 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
 
+  /* Status semantic tokens */
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+
+  /* Sidebar tokens */
+  --color-sidebar: var(--sidebar-background);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Chart tokens */
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 4px);
 }
 
 :root {
+  color-scheme: light;
+
   /* Main page background: #FAF9FF */
   --background: #FAF9FF;
 
@@ -74,6 +101,12 @@
   --destructive: #5B21B6;
   --destructive-foreground: #FFFFFF;
 
+  /* Status semantic tokens for light */
+  --success: #16A34A;
+  --success-foreground: #FFFFFF;
+  --warning: #D97706;
+  --warning-foreground: #FFFFFF;
+
   /* Borders: #E9E3F5 */
   --border: #E9E3F5;
   --input: #E9E3F5;
@@ -82,6 +115,91 @@
   --ring: #DDD6FE;
 
   --radius: 0.5rem;
+
+  /* Sidebar tokens */
+  --sidebar-background: #FFFFFF;
+  --sidebar-foreground: #27213B;
+  --sidebar-primary: #6D28D9;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #F5F3FF;
+  --sidebar-accent-foreground: #5B21B6;
+  --sidebar-border: #E9E3F5;
+  --sidebar-ring: #DDD6FE;
+
+  /* Chart tokens */
+  --chart-1: #6D28D9;
+  --chart-2: #8B5CF6;
+  --chart-3: #A78BFA;
+  --chart-4: #C4B5FD;
+  --chart-5: #DDD6FE;
+}
+
+.dark {
+  color-scheme: dark;
+
+  /* Deep neutral-purple background: not pure black, beautiful deep night tone */
+  --background: #100C1F;
+
+  /* Primary text: off-white */
+  --foreground: #F5F3FF;
+
+  /* Card surfaces: slightly lighter with off-white text */
+  --card: #19142E;
+  --card-foreground: #F5F3FF;
+
+  /* Popover surfaces */
+  --popover: #1E1838;
+  --popover-foreground: #F5F3FF;
+
+  /* Primary purple: vibrant, accessible medium-purple with WCAG AA contrast */
+  --primary: #8B5CF6;
+  --primary-foreground: #FFFFFF;
+
+  /* Secondary: subtle dark lavender/purple tone */
+  --secondary: #251E3D;
+  --secondary-foreground: #DDD6FE;
+
+  /* Muted surfaces with readable muted gray text */
+  --muted: #201A36;
+  --muted-foreground: #A59DBF;
+
+  /* Accent: slightly lifted purple surface */
+  --accent: #2E254A;
+  --accent-foreground: #EDE9FE;
+
+  /* Destructive/Alert: high-contrast dark variant */
+  --destructive: #EF4444;
+  --destructive-foreground: #FFFFFF;
+
+  /* Status semantic tokens for dark */
+  --success: #22C55E;
+  --success-foreground: #FFFFFF;
+  --warning: #F59E0B;
+  --warning-foreground: #FFFFFF;
+
+  /* Borders: low-contrast subtle purple borders */
+  --border: #322852;
+  --input: #322852;
+
+  /* Focus ring */
+  --ring: #8B5CF6;
+
+  /* Sidebar tokens */
+  --sidebar-background: #140F27;
+  --sidebar-foreground: #F5F3FF;
+  --sidebar-primary: #8B5CF6;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #251E3D;
+  --sidebar-accent-foreground: #DDD6FE;
+  --sidebar-border: #2C2248;
+  --sidebar-ring: #8B5CF6;
+
+  /* Chart tokens */
+  --chart-1: #8B5CF6;
+  --chart-2: #A78BFA;
+  --chart-3: #6D28D9;
+  --chart-4: #DDD6FE;
+  --chart-5: #C4B5FD;
 }
 
 body {
@@ -89,4 +207,71 @@ body {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
   background-color: var(--background);
   color: var(--foreground);
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+/* Custom scrollbars that honor the active theme */
+* {
+  scrollbar-color: var(--border) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background-color: var(--border);
+  border-radius: 4px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--muted-foreground);
+}
+
+/* Ensure autofilled inputs match theme and do not produce jarring white/yellow backgrounds */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+select:-webkit-autofill,
+select:-webkit-autofill:hover,
+select:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--foreground);
+  -webkit-box-shadow: 0 0 0px 1000px var(--card) inset;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+/* Print view: always enforce light theme for printed/PDF output */
+@media print {
+  :root,
+  .dark {
+    color-scheme: light !important;
+    --background: #FFFFFF !important;
+    --foreground: #1A1A1A !important;
+    --card: #FFFFFF !important;
+    --card-foreground: #1A1A1A !important;
+    --popover: #FFFFFF !important;
+    --popover-foreground: #1A1A1A !important;
+    --primary: #6D28D9 !important;
+    --primary-foreground: #FFFFFF !important;
+    --secondary: #F5F3FF !important;
+    --secondary-foreground: #5B21B6 !important;
+    --muted: #F5F3FF !important;
+    --muted-foreground: #6B647A !important;
+    --accent: #EDE9FE !important;
+    --accent-foreground: #5B21B6 !important;
+    --destructive: #5B21B6 !important;
+    --destructive-foreground: #FFFFFF !important;
+    --border: #E9E3F5 !important;
+    --input: #E9E3F5 !important;
+    --ring: #DDD6FE !important;
+  }
+
+  body {
+    background-color: #FFFFFF !important;
+    color: #1A1A1A !important;
+  }
 }

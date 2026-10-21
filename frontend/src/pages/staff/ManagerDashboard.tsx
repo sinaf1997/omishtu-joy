@@ -8,7 +8,7 @@ import {
   ShieldCheck,
   CheckCircle2,
   Clock,
-  Layers,
+
 } from 'lucide-react';
 
 export const ManagerDashboard: React.FC = () => {
