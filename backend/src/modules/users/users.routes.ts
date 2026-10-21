@@ -19,22 +19,26 @@ import { validateRequest } from '../../middleware/validate.js';
 
 const router = Router();
 
-// All staff administration routes are strictly Owner-only within the staff portal
+// Staff administration routes accessible to Owner and Receptionist
 router.use(authGuard);
 router.use(requirePortal('staff'));
-router.use(requireRole('owner'));
+router.use(requireRole(['owner', 'receptionist']));
 
 router.get('/stats', getStaffStats);
 router.get('/roles', listRoles);
 router.get('/', validateRequest({ query: listUsersQuerySchema }), listStaff);
 router.post('/', validateRequest({ body: createStaffSchema }), createStaff);
+
+// Modifying and resetting staff accounts is Owner-only
 router.patch(
   '/:id',
+  requireRole('owner'),
   validateRequest({ params: userIdParamsSchema, body: updateStaffSchema }),
   updateStaff
 );
 router.post(
   '/:id/reset-password',
+  requireRole('owner'),
   validateRequest({ params: userIdParamsSchema }),
   resetStaffPassword
 );
@@ -42,11 +46,13 @@ router.post(
 // Backward-compatibility aliases
 router.patch(
   '/:id/role',
+  requireRole('owner'),
   validateRequest({ params: userIdParamsSchema, body: updateStaffSchema }),
   updateStaff
 );
 router.patch(
   '/:id/status',
+  requireRole('owner'),
   validateRequest({ params: userIdParamsSchema, body: updateStaffSchema }),
   updateStaff
 );
@@ -57,7 +63,7 @@ export { router as usersRouter };
 const rolesRouter = Router();
 rolesRouter.use(authGuard);
 rolesRouter.use(requirePortal('staff'));
-rolesRouter.use(requireRole('owner'));
+rolesRouter.use(requireRole(['owner', 'receptionist']));
 rolesRouter.get('/', listRoles);
 
 export { rolesRouter };

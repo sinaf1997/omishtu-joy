@@ -4,15 +4,17 @@ import { sendError } from '../utils/api-response.js';
 
 /**
  * Ensures the authenticated user has one of the required roles.
+ * Accepts either rest parameters or an array of roles.
  */
-export function requireRole(...allowedRoles: UserRole[]) {
+export function requireRole(...allowedRoles: (UserRole | UserRole[])[]) {
+  const flattenedRoles = allowedRoles.flat();
   return (req: Request, res: Response, next: NextFunction): void => {
     if (!req.user) {
       sendError(res, 'Authentication required before authorization check', 401, 'UNAUTHORIZED');
       return;
     }
 
-    if (!allowedRoles.includes(req.user.role)) {
+    if (!flattenedRoles.includes(req.user.role)) {
       sendError(
         res,
         'Forbidden: you do not have permission to access this resource',

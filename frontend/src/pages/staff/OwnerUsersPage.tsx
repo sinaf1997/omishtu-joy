@@ -43,13 +43,21 @@ import {
   EyeOff,
 } from 'lucide-react';
 
-const ASSIGNABLE_ROLES: { value: StaffRole; label: string }[] = [
+const ALL_ASSIGNABLE_ROLES: { value: StaffRole; label: string }[] = [
   { value: 'receptionist', label: 'Front Desk Receptionist' },
   { value: 'academic_admin', label: 'Academic Administrator' },
   { value: 'trainer', label: 'Course Trainer' },
   { value: 'accountant', label: 'Finance & Accountant' },
   { value: 'manager', label: 'Operations Manager' },
 ];
+
+const RECEPTIONIST_ASSIGNABLE_ROLES: { value: StaffRole; label: string }[] = [
+  { value: 'academic_admin', label: 'Academic Administrator' },
+  { value: 'trainer', label: 'Course Trainer' },
+  { value: 'accountant', label: 'Finance & Accountant' },
+];
+
+const ASSIGNABLE_ROLES = ALL_ASSIGNABLE_ROLES;
 
 const cleanPhone = (val: string) => val.replace(/[\s-]/g, '');
 const isPhoneValid = (val: string) => {
@@ -87,6 +95,9 @@ const addUserSchema = z.object({
 
 export const OwnerUsersPage: React.FC = () => {
   const { user: currentOwner } = useAuth();
+  const isOwner = currentOwner?.role === 'owner';
+  const isReceptionist = currentOwner?.role === 'receptionist';
+  const assignableRoles = isReceptionist ? RECEPTIONIST_ASSIGNABLE_ROLES : ALL_ASSIGNABLE_ROLES;
 
   // Tab State
   const [activeTab, setActiveTab] = useState<'users' | 'roles'>('users');
@@ -213,6 +224,11 @@ export const OwnerUsersPage: React.FC = () => {
         }
       }
       setAddErrors(fieldErrors);
+      return;
+    }
+
+    if (isReceptionist && !['trainer', 'accountant', 'academic_admin'].includes(selectedRole)) {
+      setAddErrors({ role: 'Receptionists can only assign Trainer, Accountant, or Academic Administrator' });
       return;
     }
 
@@ -643,66 +659,74 @@ export const OwnerUsersPage: React.FC = () => {
                             </td>
 
                             <td className="py-3.5 px-6 text-right">
-                              <div className="flex items-center justify-end gap-1.5">
-                                {/* Edit User (Name, Phone & Role) */}
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  disabled={isSelf || actionId === userItem.id}
-                                  title={isSelf ? 'Cannot edit own account' : 'Edit user'}
-                                  onClick={() => {
-                                    setEditingUser(userItem);
-                                    setEditFullName(userItem.fullName);
-                                    setEditPhone(userItem.phone || '');
-                                    setEditRole(userItem.role as StaffRole);
-                                    setEditError(null);
-                                    setEditErrors({});
-                                  }}
-                                  className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground"
-                                >
-                                  <Edit className="h-3.5 w-3.5 mr-1" />
-                                  <span>Edit</span>
-                                </Button>
+                              {isOwner ? (
+                                <div className="flex items-center justify-end gap-1.5">
+                                  {/* Edit User (Name, Phone & Role) */}
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    disabled={isSelf || actionId === userItem.id}
+                                    title={isSelf ? 'Cannot edit own account' : 'Edit user'}
+                                    onClick={() => {
+                                      setEditingUser(userItem);
+                                      setEditFullName(userItem.fullName);
+                                      setEditPhone(userItem.phone || '');
+                                      setEditRole(userItem.role as StaffRole);
+                                      setEditError(null);
+                                      setEditErrors({});
+                                    }}
+                                    className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground"
+                                  >
+                                    <Edit className="h-3.5 w-3.5 mr-1" />
+                                    <span>Edit</span>
+                                  </Button>
 
-                                {/* Reset Password */}
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  disabled={actionId === userItem.id}
-                                  title="Reset Temporary Password"
-                                  onClick={() => setConfirmResetUser(userItem)}
-                                  className="h-8 px-2 text-xs text-muted-foreground hover:text-primary"
-                                >
-                                  <KeyRound className="h-3.5 w-3.5 mr-1" />
-                                  <span>Reset</span>
-                                </Button>
+                                  {/* Reset Password */}
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    disabled={actionId === userItem.id}
+                                    title="Reset Temporary Password"
+                                    onClick={() => setConfirmResetUser(userItem)}
+                                    className="h-8 px-2 text-xs text-muted-foreground hover:text-primary"
+                                  >
+                                    <KeyRound className="h-3.5 w-3.5 mr-1" />
+                                    <span>Reset</span>
+                                  </Button>
 
-                                {/* Activate / Deactivate Toggle */}
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  disabled={isSelf || actionId === userItem.id}
-                                  title={isSelf ? 'Cannot deactivate yourself' : userItem.isActive ? 'Deactivate user' : 'Activate user'}
-                                  onClick={() => setConfirmStatusUser(userItem)}
-                                  className={`h-8 px-2 text-xs ${
-                                    userItem.isActive
-                                      ? 'text-destructive hover:bg-secondary'
-                                      : 'text-primary hover:bg-secondary'
-                                  }`}
-                                >
-                                  {userItem.isActive ? (
-                                    <>
-                                      <PowerOff className="h-3.5 w-3.5 mr-1" />
-                                      <span>Deactivate</span>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Power className="h-3.5 w-3.5 mr-1" />
-                                      <span>Activate</span>
-                                    </>
-                                  )}
-                                </Button>
-                              </div>
+                                  {/* Activate / Deactivate Toggle */}
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    disabled={isSelf || actionId === userItem.id}
+                                    title={isSelf ? 'Cannot deactivate yourself' : userItem.isActive ? 'Deactivate user' : 'Activate user'}
+                                    onClick={() => setConfirmStatusUser(userItem)}
+                                    className={`h-8 px-2 text-xs ${
+                                      userItem.isActive
+                                        ? 'text-destructive hover:bg-secondary'
+                                        : 'text-primary hover:bg-secondary'
+                                    }`}
+                                  >
+                                    {userItem.isActive ? (
+                                      <>
+                                        <PowerOff className="h-3.5 w-3.5 mr-1" />
+                                        <span>Deactivate</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Power className="h-3.5 w-3.5 mr-1" />
+                                        <span>Activate</span>
+                                      </>
+                                    )}
+                                  </Button>
+                                </div>
+                              ) : (
+                                <div className="flex items-center justify-end">
+                                  <span className="text-[11px] text-muted-foreground italic px-2">
+                                    Owner permission required
+                                  </span>
+                                </div>
+                              )}
                             </td>
                           </tr>
                         );
@@ -946,14 +970,16 @@ export const OwnerUsersPage: React.FC = () => {
                   disabled={addSubmitting}
                   className="w-full h-9 rounded-md border border-input bg-card px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring text-foreground font-medium"
                 >
-                  {ASSIGNABLE_ROLES.map((r) => (
+                  {assignableRoles.map((r) => (
                     <option key={r.value} value={r.value}>
                       {r.label}
                     </option>
                   ))}
                 </select>
                 <p className="text-[11px] text-muted-foreground">
-                  * Owner role cannot be assigned.
+                  {isReceptionist
+                    ? '* Receptionists can provision Trainer, Accountant, or Academic Admin.'
+                    : '* Owner role cannot be assigned.'}
                 </p>
                 {addErrors.role && (
                   <p className="text-[11px] text-destructive font-medium">{addErrors.role}</p>

@@ -580,4 +580,116 @@ describe('Owner Staff Management & RBAC Protection', () => {
       expect(res.body.data.phone).toBeNull();
     });
   });
+
+  describe('Receptionist Role Restrictions on /api/users', () => {
+    let receptionistToken: string;
+
+    beforeEach(async () => {
+      const recHash = await hashPassword('password123');
+      const recStaff = {
+        id: 'rec-staff-id',
+        full_name: 'Reception User',
+        email: 'reception@omishtu.com',
+        password_hash: recHash,
+        role_id: 'role-receptionist',
+        role_name: 'receptionist' as const,
+        role_display_name: 'Receptionist',
+        must_reset_password: 0,
+        is_active: 1,
+        last_login_at: null,
+        deactivated_at: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      vi.spyOn(usersRepository, 'findStaffByEmail').mockImplementation(async (email) => {
+        if (email === 'reception@omishtu.com') return recStaff;
+        return null;
+      });
+      vi.spyOn(usersRepository, 'updateStaffLastLogin').mockResolvedValue();
+
+      const loginRes = await request(app)
+        .post('/api/auth/staff/login')
+        .send({ email: 'reception@omishtu.com', password: 'password123' });
+      receptionistToken = loginRes.body.data.token;
+    });
+
+    it('allows receptionist to create trainer, accountant, and academic_admin', async () => {
+      for (const role of ['trainer', 'accountant', 'academic_admin'] as const) {
+        vi.spyOn(usersRepository, 'findStaffByEmail').mockResolvedValueOnce(null);
+        vi.spyOn(usersRepository, 'findRoleByName').mockResolvedValueOnce({
+          id: `role-${role}`,
+          name: role,
+          display_name: role,
+          description: null,
+        });
+        vi.spyOn(usersRepository, 'createStaff').mockResolvedValueOnce();
+        vi.spyOn(usersRepository, 'findStaffById').mockResolvedValueOnce({
+          id: `new-${role}-id`,
+          full_name: `New ${role}`,
+          email: `${role}@omishtu.com`,
+          phone: null,
+          password_hash: 'hash',
+          role_id: `role-${role}`,
+          role_name: role,
+          role_display_name: role,
+          must_reset_password: 1,
+          is_active: 1,
+          last_login_at: null,
+          deactivated_at: null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+
+        const res = await request(app)
+          .post('/api/users')
+          .set('Authorization', `Bearer ${receptionistToken}`)
+          .send({
+            fullName: `New ${role}`,
+            email: `${role}@omishtu.com`,
+            password: 'StrongPassword123!',
+            role,
+          });
+
+        expect(res.status).toBe(201);
+      }
+    });
+
+    it('blocks receptionist from creating manager or receptionist with 403', async () => {
+      for (const role of ['manager', 'receptionist'] as const) {
+        const res = await request(app)
+          .post('/api/users')
+          .set('Authorization', `Bearer ${receptionistToken}`)
+          .send({
+            fullName: `Attempted ${role}`,
+            email: `attempted-${role}@omishtu.com`,
+            password: 'StrongPassword123!',
+            role,
+          });
+
+        expect(res.status).toBe(403);
+        expect(res.body.error.code).toBe('FORBIDDEN_ROLE');
+      }
+    });
+
+    it('blocks receptionist from updating staff accounts (PATCH /api/users/:id) with 403', async () => {
+      const res = await request(app)
+        .patch('/api/users/any-staff-id')
+        .set('Authorization', `Bearer ${receptionistToken}`)
+        .send({ fullName: 'Unauthorized Update' });
+
+      expect(res.status).toBe(403);
+      expect(res.body.error.code).toBe('FORBIDDEN');
+    });
+
+    it('blocks receptionist from resetting staff password with 403', async () => {
+      const res = await request(app)
+        .post('/api/users/any-staff-id/reset-password')
+        .set('Authorization', `Bearer ${receptionistToken}`)
+        .send({});
+
+      expect(res.status).toBe(403);
+      expect(res.body.error.code).toBe('FORBIDDEN');
+    });
+  });
 });

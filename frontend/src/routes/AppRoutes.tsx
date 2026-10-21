@@ -27,6 +27,7 @@ import { ComingSoonPage } from '../pages/ComingSoonPage.js';
 import { MyProfilePage } from '../pages/staff/MyProfilePage.js';
 import { OwnerDashboard } from '../pages/staff/OwnerDashboard.js';
 import { OwnerUsersPage } from '../pages/staff/OwnerUsersPage.js';
+import { StudentsPage } from '../pages/staff/StudentsPage.js';
 import { ReceptionDashboard } from '../pages/staff/ReceptionDashboard.js';
 import { AcademicsDashboard } from '../pages/staff/AcademicsDashboard.js';
 import { TrainerDashboard } from '../pages/staff/TrainerDashboard.js';
@@ -73,6 +74,10 @@ export const AppRoutes: React.FC = () => {
             {/* Owner Role Only */}
             <Route element={<RoleRoute allowedRoles={['owner']} />}>
               <Route path="owner" element={<OwnerDashboard />} />
+            </Route>
+
+            {/* Users & Roles Management: Accessible to Owner and Receptionist */}
+            <Route element={<RoleRoute allowedRoles={['owner', 'receptionist']} />}>
               <Route path="owner/users" element={<OwnerUsersPage />} />
             </Route>
 
@@ -101,8 +106,12 @@ export const AppRoutes: React.FC = () => {
               <Route path="reception" element={<ReceptionDashboard />} />
             </Route>
 
+            {/* Students Management (Owner, Manager, Receptionist, Academic Admin) */}
+            <Route element={<RoleRoute allowedRoles={['owner', 'manager', 'receptionist', 'academic_admin']} />}>
+              <Route path="students" element={<StudentsPage />} />
+            </Route>
+
             {/* Shared Coming Soon Routes for Planned Sprints */}
-            <Route path="students" element={<ComingSoonPage />} />
             <Route path="documents" element={<ComingSoonPage />} />
             <Route path="courses" element={<ComingSoonPage />} />
             <Route path="enrollments" element={<ComingSoonPage />} />
