@@ -106,7 +106,7 @@ export const NAVIGATION_ITEMS: NavItem[] = [
     icon: Users,
     allowedRoles: ['owner', 'manager', 'receptionist', 'academic_admin'],
     sprint: 2,
-    isFunctional: false,
+    isFunctional: true,
   },
   {
     id: 'students-docs',
@@ -240,7 +240,7 @@ export const NAVIGATION_ITEMS: NavItem[] = [
     path: '/staff/owner/users',
     section: 'ADMIN',
     icon: UserCog,
-    allowedRoles: ['owner'],
+    allowedRoles: ['owner', 'receptionist'],
     sprint: 1,
     isFunctional: true,
   },

@@ -73,18 +73,33 @@ export class UsersService {
     return record ? sanitizeStaff(record) : null;
   }
 
-  async createStaff(input: {
-    fullName?: string;
-    full_name?: string;
-    email: string;
-    phone?: string | null;
-    password: string;
-    role: StaffRole;
-  }): Promise<StaffMember> {
+  async createStaff(
+    input: {
+      fullName?: string;
+      full_name?: string;
+      email: string;
+      phone?: string | null;
+      password: string;
+      role: StaffRole;
+    },
+    creatorRole?: string
+  ): Promise<StaffMember> {
     if (input.role === 'owner') {
       const err = new Error('Cannot assign the owner role');
       (err as unknown as { statusCode: number; code: string }).statusCode = 400;
       (err as unknown as { statusCode: number; code: string }).code = 'INVALID_ROLE';
+      throw err;
+    }
+
+    if (
+      creatorRole === 'receptionist' &&
+      !['trainer', 'accountant', 'academic_admin'].includes(input.role)
+    ) {
+      const err = new Error(
+        'Receptionists can only add trainer, accountant, or academic_admin users'
+      );
+      (err as unknown as { statusCode: number; code: string }).statusCode = 403;
+      (err as unknown as { statusCode: number; code: string }).code = 'FORBIDDEN_ROLE';
       throw err;
     }
 
