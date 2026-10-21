@@ -1,26 +1,6 @@
 -- ==============================================================================
 -- Migration: 010_lms_sync.sql
--- Sprint: S9
--- Description: External LMS synchronization logs and LMS foreign identifier columns
--- ==============================================================================
 
--- ==============================================================================
--- Changes to existing tables
--- ==============================================================================
-
--- 1. Add lms_user_id to students
-SET @c := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'students' AND COLUMN_NAME = 'lms_user_id');
-SET @sql := IF(@c = 0, 'ALTER TABLE students ADD COLUMN lms_user_id VARCHAR(100) NULL AFTER student_code, ADD UNIQUE KEY uq_students_lms_id (lms_user_id)', 'SELECT ''students.lms_user_id already exists - skipped'' AS info');
-PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
-
--- 2. Add lms_course_id to courses
-SET @c := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'courses' AND COLUMN_NAME = 'lms_course_id');
-SET @sql := IF(@c = 0, 'ALTER TABLE courses ADD COLUMN lms_course_id VARCHAR(100) NULL AFTER code, ADD UNIQUE KEY uq_courses_lms_id (lms_course_id)', 'SELECT ''courses.lms_course_id already exists - skipped'' AS info');
-PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
-
--- ==============================================================================
--- Tables in dependency order
--- ==============================================================================
 
 -- 1. LMS Synchronization Logs
 CREATE TABLE IF NOT EXISTS lms_sync_logs (
