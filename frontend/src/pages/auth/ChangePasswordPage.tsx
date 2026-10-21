@@ -12,6 +12,7 @@ import {
 import { Input } from '../../components/ui/input.js';
 import { Label } from '../../components/ui/label.js';
 import { Button } from '../../components/ui/button.js';
+import { ThemeToggle } from '../../components/ThemeToggle.js';
 import {
   KeyRound,
   Lock,
@@ -90,6 +91,18 @@ export const ChangePasswordPage: React.FC = () => {
   return (
     <div className="min-h-screen flex flex-col justify-center items-center p-4 bg-background selection:bg-secondary selection:text-primary">
       <div className="w-full max-w-md space-y-6">
+        <div className="flex items-center justify-between">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleCancel}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+          >
+            <LogOut className="h-3.5 w-3.5" />
+            <span>Sign Out</span>
+          </Button>
+          <ThemeToggle />
+        </div>
         <Card className="shadow-lg border-border bg-card">
           <CardHeader className="space-y-1.5 border-b border-border text-center pb-6">
             <div className="h-12 w-12 rounded-full bg-secondary text-primary mx-auto flex items-center justify-center mb-1">

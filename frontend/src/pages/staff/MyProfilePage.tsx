@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth.js';
+import { useTheme } from '../../hooks/useTheme.js';
 import {
   Card,
   CardHeader,
@@ -24,6 +25,9 @@ import {
   Save,
   KeyRound,
   Check,
+  Sun,
+  Moon,
+  Palette,
 } from 'lucide-react';
 
 function getInitials(name?: string, email?: string): string {
@@ -74,6 +78,7 @@ function formatMemberSince(dateStr?: string | Date | null): string {
 
 export const MyProfilePage: React.FC = () => {
   const { user, updateProfile, changePassword } = useAuth();
+  const { theme, toggleTheme } = useTheme();
 
   // Profile Information Form State
   const [fullName, setFullName] = useState(user?.fullName || '');
@@ -334,7 +339,7 @@ export const MyProfilePage: React.FC = () => {
                   <div className="p-2.5 rounded-lg bg-secondary/30 border border-border">
                     <p className="text-[11px] text-muted-foreground font-medium">Status</p>
                     <div className="flex items-center gap-1.5 mt-1">
-                      <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
+                      <span className="h-2 w-2 rounded-full bg-success shrink-0" />
                       <span className="text-xs font-semibold text-foreground">
                         {user?.isActive !== false ? 'Active' : 'Inactive'}
                       </span>
@@ -474,7 +479,7 @@ export const MyProfilePage: React.FC = () => {
                     <div className="flex items-center gap-1.5">
                       <div
                         className={`h-1.5 w-1.5 rounded-full ${
-                          newPassword.length >= 8 ? 'bg-emerald-500' : 'bg-muted-foreground'
+                          newPassword.length >= 8 ? 'bg-success' : 'bg-muted-foreground'
                         }`}
                       />
                       <span className={newPassword.length >= 8 ? 'text-foreground font-medium' : ''}>
@@ -485,7 +490,7 @@ export const MyProfilePage: React.FC = () => {
                       <div
                         className={`h-1.5 w-1.5 rounded-full ${
                           newPassword && currentPassword && newPassword !== currentPassword
-                            ? 'bg-emerald-500'
+                            ? 'bg-success'
                             : 'bg-muted-foreground'
                         }`}
                       />
@@ -554,6 +559,63 @@ export const MyProfilePage: React.FC = () => {
           </div>
         </Card>
       </div>
+
+      {/* CARD 3: Appearance Preferences (Direct Toggle) */}
+      <Card className="shadow-sm border-border bg-card">
+        <CardHeader className="border-b border-border pb-4">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-full bg-secondary text-primary flex items-center justify-center shrink-0">
+              <Palette className="h-5 w-5" />
+            </div>
+            <div>
+              <CardTitle className="text-lg font-bold text-foreground">
+                Appearance
+              </CardTitle>
+              <CardDescription className="text-xs text-muted-foreground">
+                Customize your workspace theme. Preference is saved locally to this device.
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl border border-border bg-secondary/30">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                {theme === 'dark' ? (
+                  <Moon className="h-4 w-4 text-primary" />
+                ) : (
+                  <Sun className="h-4 w-4 text-primary" />
+                )}
+                <span className="text-sm font-bold text-foreground">Dark mode</span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {theme === 'dark'
+                  ? 'Deep neutral-purple night mode is currently active'
+                  : 'Clean light purple & white appearance is currently active'}
+              </p>
+            </div>
+
+            {/* Direct Switch Button */}
+            <button
+              type="button"
+              role="switch"
+              aria-checked={theme === 'dark'}
+              onClick={toggleTheme}
+              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+                theme === 'dark' ? 'bg-primary' : 'bg-muted-foreground/30'
+              }`}
+            >
+              <span className="sr-only">Toggle dark mode</span>
+              <span
+                aria-hidden="true"
+                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-card shadow-sm ring-0 transition duration-200 ease-in-out ${
+                  theme === 'dark' ? 'translate-x-5' : 'translate-x-0'
+                }`}
+              />
+            </button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

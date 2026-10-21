@@ -13,6 +13,7 @@ import {
   Sparkles,
   CheckCircle2,
 } from 'lucide-react';
+import { ThemeToggle } from '../components/ThemeToggle.js';
 
 export const LandingPage: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
@@ -74,7 +75,8 @@ export const LandingPage: React.FC = () => {
           </Link>
 
           {/* Nav Links */}
-          <div className="flex items-center gap-3 sm:gap-6">
+          <div className="flex items-center gap-2 sm:gap-4">
+            <ThemeToggle />
             {isAuthenticated && authenticatedDestination ? (
               <Link
                 to={authenticatedDestination}
@@ -107,6 +109,9 @@ export const LandingPage: React.FC = () => {
       <main className="flex-1 flex flex-col items-center justify-center">
         {/* Subtle decorative purple glow using existing background and secondary tokens */}
         <div className="w-full relative overflow-hidden py-16 sm:py-24">
+          {/* Subtle grid and decorative glow using semantic tokens */}
+          <div className="absolute inset-0 -z-10 bg-[linear-gradient(to_right,var(--border)_1px,transparent_1px),linear-gradient(to_bottom,var(--border)_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-35 dark:opacity-20 pointer-events-none" />
+          <div className="absolute top-12 left-1/2 -translate-x-1/2 w-[32rem] sm:w-[48rem] h-[20rem] bg-primary/10 dark:bg-primary/20 blur-3xl rounded-full -z-10 pointer-events-none" />
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center flex flex-col items-center relative z-10">
             {/* Small Pill Badge */}
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-border bg-secondary/70 shadow-sm mb-6">

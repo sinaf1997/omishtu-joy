@@ -13,7 +13,7 @@ export const LoginPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const { login } = useAuth();
+  const { loginStaff } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -30,7 +30,7 @@ export const LoginPage: React.FC = () => {
 
     setLoading(true);
     try {
-      await login({ email: email.trim(), password });
+      await loginStaff({ email: email.trim(), password });
       navigate(from, { replace: true });
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'response' in err) {

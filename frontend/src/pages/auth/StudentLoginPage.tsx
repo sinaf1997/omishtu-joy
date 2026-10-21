@@ -12,6 +12,7 @@ import {
 import { Input } from '../../components/ui/input.js';
 import { Label } from '../../components/ui/label.js';
 import { Button } from '../../components/ui/button.js';
+import { ThemeToggle } from '../../components/ThemeToggle.js';
 import {
   Lock,
   IdCard,
@@ -72,14 +73,17 @@ export const StudentLoginPage: React.FC = () => {
   return (
     <div className="min-h-screen flex flex-col justify-center items-center p-4 bg-background selection:bg-secondary selection:text-primary">
       <div className="w-full max-w-md space-y-6">
-        {/* Back Link */}
-        <Link
-          to="/"
-          className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          <span>Back to Home</span>
-        </Link>
+        {/* Top bar with Back Link and Theme Toggle */}
+        <div className="flex items-center justify-between">
+          <Link
+            to="/"
+            className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span>Back to Home</span>
+          </Link>
+          <ThemeToggle />
+        </div>
 
         {/* Login Card */}
         <Card className="shadow-lg border-border bg-card">

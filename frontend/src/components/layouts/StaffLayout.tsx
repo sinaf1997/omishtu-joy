@@ -3,6 +3,7 @@ import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth.js';
 import { StaffRole } from '../../types/auth.js';
 import { getNavItemsForRole, NAV_SECTIONS, NavSection } from '../../config/navigation.js';
+import { ThemeToggle } from '../ThemeToggle.js';
 import {
   Layers,
   Search,
@@ -181,7 +182,10 @@ export const StaffLayout: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Theme Toggle */}
+            <ThemeToggle />
+
             {/* Notification Bell (Placeholder) */}
             <button
               className="p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors relative"
