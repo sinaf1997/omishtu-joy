@@ -7,17 +7,13 @@ async function inspectDb() {
     console.log('=== SHOW TABLES ===');
     console.table(tables);
 
-    const [studentCols] = await pool.query('DESCRIBE students');
-    console.log('\n=== DESCRIBE students ===');
-    console.table(studentCols);
+    const [courseCols] = await pool.query('DESCRIBE courses');
+    console.log('\n=== DESCRIBE courses ===');
+    console.table(courseCols);
 
-    const [countersCols] = await pool.query('DESCRIBE student_id_counters');
-    console.log('\n=== DESCRIBE student_id_counters ===');
-    console.table(countersCols);
-
-    const [contactsCols] = await pool.query('DESCRIBE student_emergency_contacts');
-    console.log('\n=== DESCRIBE student_emergency_contacts ===');
-    console.table(contactsCols);
+    const [slotCols] = await pool.query('DESCRIBE course_schedule_slots');
+    console.log('\n=== DESCRIBE course_schedule_slots ===');
+    console.table(slotCols);
   } catch (e) {
     console.error('Inspection error:', e);
   } finally {

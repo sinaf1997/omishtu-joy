@@ -39,6 +39,11 @@ import { StudentRegistrationPage } from '../pages/staff/StudentRegistrationPage.
 import { StudentDetailPage } from '../pages/staff/StudentDetailPage.js';
 import { StudentSlipPage } from '../pages/staff/StudentSlipPage.js';
 
+// Sprint 3: Academics & Courses Pages
+import { CoursesListPage } from '../pages/staff/academics/CoursesListPage.js';
+import { CourseFormPage } from '../pages/staff/academics/CourseFormPage.js';
+import { CourseDetailPage } from '../pages/staff/academics/CourseDetailPage.js';
+
 // Student Portal Pages
 import { StudentDashboard } from '../pages/student/StudentDashboard.js';
 import { StudentProfilePage } from '../pages/student/StudentProfilePage.js';
@@ -134,9 +139,31 @@ export const AppRoutes: React.FC = () => {
               <Route path="students" element={<Navigate to="/staff/reception/students" replace />} />
             </Route>
 
+            {/* Sprint 3: Courses Management */}
+            <Route
+              element={
+                <RoleRoute
+                  allowedRoles={['owner', 'manager', 'academic_admin', 'receptionist', 'trainer']}
+                />
+              }
+            >
+              <Route path="academics/courses" element={<CoursesListPage />} />
+              <Route path="academics/courses/:id" element={<CourseDetailPage />} />
+              <Route path="courses" element={<Navigate to="/staff/academics/courses" replace />} />
+            </Route>
+
+            {/* Course Create & Edit Routes (Manage Permission: Owner, Manager, Academic Admin) */}
+            <Route
+              element={
+                <RoleRoute allowedRoles={['owner', 'manager', 'academic_admin']} />
+              }
+            >
+              <Route path="academics/courses/new" element={<CourseFormPage />} />
+              <Route path="academics/courses/:id/edit" element={<CourseFormPage />} />
+            </Route>
+
             {/* Shared Coming Soon Routes for Planned Sprints */}
             <Route path="documents" element={<ComingSoonPage />} />
-            <Route path="courses" element={<ComingSoonPage />} />
             <Route path="enrollments" element={<ComingSoonPage />} />
             <Route path="attendance" element={<ComingSoonPage />} />
             <Route path="grading" element={<ComingSoonPage />} />
