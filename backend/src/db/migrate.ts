@@ -96,6 +96,30 @@ export async function runMigrations(closePoolOnFinish: boolean = true): Promise<
       executedMigrations.delete('001_auth_and_rbac.sql');
     }
 
+    // Check if courses table exists but lacks course_type (legacy Sprint 3 draft schema)
+    const [courseColCheck] = await connection.query<RowDataPacket[]>(
+      `SELECT COUNT(*) as count FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'courses' AND COLUMN_NAME = 'course_type'`
+    );
+    const courseTypeExists = ((courseColCheck[0] as { count?: number })?.count ?? 0) > 0;
+    const [coursesTableCheck] = await connection.query<RowDataPacket[]>(
+      `SELECT COUNT(*) as count FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'courses'`
+    );
+    const coursesTableExists = ((coursesTableCheck[0] as { count?: number })?.count ?? 0) > 0;
+
+    if (coursesTableExists && !courseTypeExists) {
+      console.warn('⚠️ Legacy courses table detected without course_type column.');
+      console.warn('Re-aligning courses schema with Sprint 3 specification...');
+      await connection.query('SET FOREIGN_KEY_CHECKS = 0');
+      await connection.query('DROP TABLE IF EXISTS course_schedule_slots');
+      await connection.query('DROP TABLE IF EXISTS waitlist_entries');
+      await connection.query('DROP TABLE IF EXISTS enrollments');
+      await connection.query('DROP TABLE IF EXISTS course_sessions');
+      await connection.query('DROP TABLE IF EXISTS courses');
+      await connection.query('SET FOREIGN_KEY_CHECKS = 1');
+      await connection.query(`DELETE FROM _migrations WHERE name IN ('004_courses_and_enrollments.sql', '004_courses_and_timetables.sql')`);
+      executedMigrations.delete('004_courses_and_enrollments.sql');
+      executedMigrations.delete('004_courses_and_timetables.sql');
+    }
 
     // 4. Read migration files
     const migrationsDir = path.resolve(__dirname, 'migrations');

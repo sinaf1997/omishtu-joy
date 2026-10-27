@@ -7,6 +7,7 @@ import { healthRouter } from './modules/health/health.routes.js';
 import { authRouter } from './modules/auth/auth.routes.js';
 import { usersRouter, rolesRouter } from './modules/users/users.routes.js';
 import { studentsRouter } from './modules/students/students.routes.js';
+import { coursesRouter } from './modules/courses/courses.routes.js';
 import { notFoundHandler } from './middleware/not-found.js';
 import { errorHandler } from './middleware/error-handler.js';
 
@@ -44,6 +45,7 @@ export function createApp(): Express {
   app.use('/api/users', usersRouter);
   app.use('/api/roles', rolesRouter);
   app.use('/api/students', studentsRouter);
+  app.use('/api/courses', coursesRouter);
 
   // 404 Handler
   app.use(notFoundHandler);

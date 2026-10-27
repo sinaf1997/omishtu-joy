@@ -123,12 +123,12 @@ export const NAVIGATION_ITEMS: NavItem[] = [
   {
     id: 'academics-courses',
     label: 'Courses',
-    path: '/staff/courses',
+    path: '/staff/academics/courses',
     section: 'ACADEMICS',
     icon: BookOpen,
-    allowedRoles: ['owner', 'manager', 'academic_admin', 'trainer'],
+    allowedRoles: ['owner', 'manager', 'academic_admin', 'receptionist', 'trainer'],
     sprint: 3,
-    isFunctional: false,
+    isFunctional: true,
   },
   {
     id: 'academics-enrollments',
