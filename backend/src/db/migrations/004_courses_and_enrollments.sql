@@ -1,7 +1,7 @@
 -- ==============================================================================
 -- Migration: 004_courses_and_enrollments.sql
--- Sprint: S3 (Part 1)
--- Description: Course catalog with major/elective types, weekly timetables and capacity limits
+-- Sprint: S3 (Part 1 & 2)
+-- Description: Course catalog, timetables, student enrollments, and waitlists
 -- ==============================================================================
 
 -- 1. Courses Table
@@ -45,4 +45,48 @@ CREATE TABLE IF NOT EXISTS course_schedule_slots (
   INDEX idx_course_schedule_slots_course_id (course_id),
   INDEX idx_course_schedule_slots_day_start (day_of_week, start_time),
   CONSTRAINT fk_course_schedule_slots_course FOREIGN KEY (course_id) REFERENCES courses (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 3. Enrollments Table
+CREATE TABLE IF NOT EXISTS enrollments (
+  id VARCHAR(36) NOT NULL,
+  student_id VARCHAR(36) NOT NULL,
+  course_id VARCHAR(36) NOT NULL,
+  status ENUM('active', 'completed', 'dropped', 'cancelled') NOT NULL DEFAULT 'active',
+  enrolled_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  enrolled_by_staff_id VARCHAR(36) NULL,
+  source ENUM('direct', 'waitlist') NOT NULL DEFAULT 'direct',
+  dropped_at TIMESTAMP NULL,
+  drop_reason VARCHAR(255) NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  CONSTRAINT uq_enrollments_student_course UNIQUE (student_id, course_id),
+  INDEX idx_enrollments_course_status (course_id, status),
+  INDEX idx_enrollments_student_status (student_id, status),
+  CONSTRAINT fk_enrollments_student FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE RESTRICT,
+  CONSTRAINT fk_enrollments_course FOREIGN KEY (course_id) REFERENCES courses (id) ON DELETE RESTRICT,
+  CONSTRAINT fk_enrollments_enrolled_by_staff FOREIGN KEY (enrolled_by_staff_id) REFERENCES staff (id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 4. Waitlist Entries Table
+CREATE TABLE IF NOT EXISTS waitlist_entries (
+  id VARCHAR(36) NOT NULL,
+  student_id VARCHAR(36) NOT NULL,
+  course_id VARCHAR(36) NOT NULL,
+  status ENUM('waiting', 'promoted', 'removed') NOT NULL DEFAULT 'waiting',
+  added_by_staff_id VARCHAR(36) NULL,
+  joined_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  resolved_at TIMESTAMP NULL,
+  resolved_by_staff_id VARCHAR(36) NULL,
+  removal_reason VARCHAR(255) NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  CONSTRAINT uq_waitlist_entries_student_course UNIQUE (student_id, course_id),
+  INDEX idx_waitlist_entries_course_status (course_id, status),
+  CONSTRAINT fk_waitlist_entries_student FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE,
+  CONSTRAINT fk_waitlist_entries_course FOREIGN KEY (course_id) REFERENCES courses (id) ON DELETE CASCADE,
+  CONSTRAINT fk_waitlist_entries_added_by_staff FOREIGN KEY (added_by_staff_id) REFERENCES staff (id) ON DELETE SET NULL,
+  CONSTRAINT fk_waitlist_entries_resolved_by_staff FOREIGN KEY (resolved_by_staff_id) REFERENCES staff (id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

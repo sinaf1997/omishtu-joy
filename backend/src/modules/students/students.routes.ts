@@ -6,6 +6,7 @@ import {
   createStudent,
   toggleStudentStatus,
 } from './students.controller.js';
+import { enrollmentsController } from '../enrollments/enrollments.controller.js';
 import {
   createStudentSchema,
   listStudentsQuerySchema,
@@ -22,6 +23,7 @@ router.use(requirePortal('staff'));
 
 router.get('/stats', requirePermission('students:read'), getStudentStats);
 router.get('/', requirePermission('students:read'), validateRequest({ query: listStudentsQuerySchema }), listStudents);
+router.get('/:id/enrollments', requirePermission('courses:read'), enrollmentsController.getStudentEnrollments);
 router.get('/:id', requirePermission('students:read'), getStudentById);
 router.post('/', requirePermission('students:create'), validateRequest({ body: createStudentSchema }), createStudent);
 router.patch('/:id/status', requirePermission('students:edit', 'students:create'), toggleStudentStatus);
