@@ -23,10 +23,9 @@ const router = Router();
 router.use(authGuard);
 router.use(requirePortal('staff'));
 
-
-router.get('/stats', requireRole('owner'), getStaffStats);
+router.get('/stats', requireRole(['owner', 'receptionist']), getStaffStats);
 router.get('/roles', requireRole(['owner', 'receptionist']), listRoles);
-router.get('/', requireRole('owner'), validateRequest({ query: listUsersQuerySchema }), listStaff);
+router.get('/', requireRole(['owner', 'receptionist']), validateRequest({ query: listUsersQuerySchema }), listStaff);
 router.post('/', requireRole(['owner', 'receptionist']), validateRequest({ body: createStaffSchema }), createStaff);
 
 // Modifying and resetting staff accounts is Owner-only

@@ -446,13 +446,26 @@ describe('Owner Staff Management & RBAC Protection', () => {
 
         const staffToken = loginRes.body.data.token;
 
-        // 3. Newly created non-owner staff CANNOT access /api/users
-        const blockedUsersRes = await request(app)
-          .get('/api/users')
-          .set('Authorization', `Bearer ${staffToken}`);
+        // 3. Access verification for /api/users
+        if (role === 'receptionist') {
+          vi.spyOn(usersRepository, 'listStaffPaginated').mockResolvedValueOnce({
+            staff: [],
+            total: 0,
+          });
+          const allowedUsersRes = await request(app)
+            .get('/api/users')
+            .set('Authorization', `Bearer ${staffToken}`);
 
-        expect(blockedUsersRes.status).toBe(403);
-        expect(blockedUsersRes.body.error.code).toBe('FORBIDDEN');
+          expect(allowedUsersRes.status).toBe(200);
+          expect(allowedUsersRes.body.success).toBe(true);
+        } else {
+          const blockedUsersRes = await request(app)
+            .get('/api/users')
+            .set('Authorization', `Bearer ${staffToken}`);
+
+          expect(blockedUsersRes.status).toBe(403);
+          expect(blockedUsersRes.body.error.code).toBe('FORBIDDEN');
+        }
       });
     }
   });
@@ -612,6 +625,29 @@ describe('Owner Staff Management & RBAC Protection', () => {
         .post('/api/auth/staff/login')
         .send({ email: 'reception@omishtu.com', password: 'password123' });
       receptionistToken = loginRes.body.data.token;
+    });
+
+    it('allows receptionist to list staff and view stats on /api/users', async () => {
+      vi.spyOn(usersRepository, 'listStaffPaginated').mockResolvedValueOnce({
+        staff: [],
+        total: 0,
+      });
+      vi.spyOn(usersRepository, 'getStaffStats').mockResolvedValueOnce({
+        totalStaff: 5,
+        activeStaff: 4,
+        inactiveStaff: 1,
+        totalRoles: 6,
+      });
+
+      const listRes = await request(app)
+        .get('/api/users')
+        .set('Authorization', `Bearer ${receptionistToken}`);
+      expect(listRes.status).toBe(200);
+
+      const statsRes = await request(app)
+        .get('/api/users/stats')
+        .set('Authorization', `Bearer ${receptionistToken}`);
+      expect(statsRes.status).toBe(200);
     });
 
     it('allows receptionist to create trainer, accountant, and academic_admin', async () => {
