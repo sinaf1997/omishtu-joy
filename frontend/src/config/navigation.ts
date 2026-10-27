@@ -138,7 +138,7 @@ export const NAVIGATION_ITEMS: NavItem[] = [
     icon: UserCheck,
     allowedRoles: ['owner', 'manager', 'academic_admin', 'receptionist'],
     sprint: 3,
-    isFunctional: false,
+    isFunctional: true,
   },
   {
     id: 'academics-attendance',

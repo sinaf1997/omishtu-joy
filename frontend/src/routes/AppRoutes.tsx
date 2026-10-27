@@ -43,6 +43,7 @@ import { StudentSlipPage } from '../pages/staff/StudentSlipPage.js';
 import { CoursesListPage } from '../pages/staff/academics/CoursesListPage.js';
 import { CourseFormPage } from '../pages/staff/academics/CourseFormPage.js';
 import { CourseDetailPage } from '../pages/staff/academics/CourseDetailPage.js';
+import { EnrollmentsListPage } from '../pages/staff/academics/EnrollmentsListPage.js';
 
 // Student Portal Pages
 import { StudentDashboard } from '../pages/student/StudentDashboard.js';
@@ -68,10 +69,10 @@ const StaffRoleRedirect: React.FC = () => {
 export const AppRoutes: React.FC = () => {
   return (
     <Routes>
-      {/* 1. Public Landing Page */}
+      {/* 1. Public Marketing Landing Page */}
       <Route path="/" element={<LandingPage />} />
 
-      {/* 2. Public-Only Authentication Routes */}
+      {/* 2. Public-only Auth Pages (Redirects already authenticated users to their portal) */}
       <Route element={<PublicOnlyRoute />}>
         <Route path="/staff/login" element={<StaffLoginPage />} />
         <Route path="/student/login" element={<StudentLoginPage />} />
@@ -162,9 +163,19 @@ export const AppRoutes: React.FC = () => {
               <Route path="academics/courses/:id/edit" element={<CourseFormPage />} />
             </Route>
 
+            {/* Sprint 3 (Part 2): Student Enrollments & Waitlists */}
+            <Route
+              element={
+                <RoleRoute
+                  allowedRoles={['owner', 'manager', 'academic_admin', 'receptionist']}
+                />
+              }
+            >
+              <Route path="enrollments" element={<EnrollmentsListPage />} />
+            </Route>
+
             {/* Shared Coming Soon Routes for Planned Sprints */}
             <Route path="documents" element={<ComingSoonPage />} />
-            <Route path="enrollments" element={<ComingSoonPage />} />
             <Route path="attendance" element={<ComingSoonPage />} />
             <Route path="grading" element={<ComingSoonPage />} />
             <Route path="certificates" element={<ComingSoonPage />} />
@@ -196,7 +207,7 @@ export const AppRoutes: React.FC = () => {
         </Route>
       </Route>
 
-      {/* 6. Utility & Error Pages */}
+      {/* 6. Utility Error Pages */}
       <Route path="/forbidden" element={<ForbiddenPage />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>

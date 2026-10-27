@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import { coursesRepository, buildSlotSummary } from './courses.repository.js';
+import { enrollmentsRepository } from '../enrollments/enrollments.repository.js';
 import {
   CreateCourseDto,
   UpdateCourseDto,
@@ -47,11 +48,9 @@ function calculateDurationWeeks(startDateStr: string, endDateStr: string): numbe
 export const coursesService = {
   /**
    * Returns the count of students currently enrolled in the given course.
-   * NOTE: Returns 0 for now until Sprint 3 Part 2 (enrollment module).
-   * Replacing this one function in the next prompt wires real enrollment metrics.
    */
-  async getEnrolledCount(_courseId: string): Promise<number> {
-    return 0;
+  async getEnrolledCount(courseId: string): Promise<number> {
+    return enrollmentsRepository.getEnrolledCountByCourseId(courseId);
   },
 
   async createCourse(data: CreateCourseDto, staffId?: string): Promise<CourseWithDetails> {
@@ -236,6 +235,7 @@ export const coursesService = {
     }
 
     await coursesRepository.updateCourseStatus(id, newStatus);
+    await enrollmentsRepository.handleCourseStatusChange(id, newStatus);
     return this.getCourseById(id);
   },
 

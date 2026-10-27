@@ -121,6 +121,17 @@ export async function runMigrations(closePoolOnFinish: boolean = true): Promise<
       executedMigrations.delete('004_courses_and_timetables.sql');
     }
 
+    // Check if enrollments table exists
+    const [enrollmentsTableCheck] = await connection.query<RowDataPacket[]>(
+      `SELECT COUNT(*) as count FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'enrollments'`
+    );
+    const enrollmentsTableExists = ((enrollmentsTableCheck[0] as { count?: number })?.count ?? 0) > 0;
+    if (!enrollmentsTableExists && executedMigrations.has('004_courses_and_enrollments.sql')) {
+      console.warn('⚠️ Table "enrollments" missing. Re-applying 004_courses_and_enrollments.sql to create enrollments and waitlist_entries...');
+      await connection.query(`DELETE FROM _migrations WHERE name = '004_courses_and_enrollments.sql'`);
+      executedMigrations.delete('004_courses_and_enrollments.sql');
+    }
+
     // 4. Read migration files
     const migrationsDir = path.resolve(__dirname, 'migrations');
     const files = await fs.readdir(migrationsDir);
