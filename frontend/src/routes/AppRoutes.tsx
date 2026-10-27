@@ -42,6 +42,13 @@ import { StudentSlipPage } from '../pages/staff/StudentSlipPage.js';
 // Student Portal Pages
 import { StudentDashboard } from '../pages/student/StudentDashboard.js';
 import { StudentProfilePage } from '../pages/student/StudentProfilePage.js';
+import { StudentMembershipPage } from '../pages/student/StudentMembershipPage.js';
+import { BrowseTrainersPage } from '../pages/student/BrowseTrainersPage.js';
+import { StudentMessagesPage } from '../pages/student/StudentMessagesPage.js';
+import { StudentConsistencyPage } from '../pages/student/StudentConsistencyPage.js';
+import { ClassPlanPage } from '../pages/student/ClassPlanPage.js';
+import { StudentClassesPage } from '../pages/student/StudentClassesPage.js';
+import { StudentProgressPage } from '../pages/student/StudentProgressPage.js';
 
 // Helper component to redirect root /staff to the current staff role's dashboard
 const StaffRoleRedirect: React.FC = () => {
@@ -150,7 +157,14 @@ export const AppRoutes: React.FC = () => {
           <Route path="/student" element={<StudentLayout />}>
             <Route index element={<Navigate to="/student/dashboard" replace />} />
             <Route path="dashboard" element={<StudentDashboard />} />
+            <Route path="membership" element={<StudentMembershipPage />} />
             <Route path="profile" element={<StudentProfilePage />} />
+            <Route path="trainers" element={<BrowseTrainersPage />} />
+            <Route path="messages" element={<StudentMessagesPage />} />
+            <Route path="consistency" element={<StudentConsistencyPage />} />
+            <Route path="class-plan" element={<ClassPlanPage />} />
+            <Route path="classes" element={<StudentClassesPage />} />
+            <Route path="progress" element={<StudentProgressPage />} />
           </Route>
         </Route>
       </Route>
