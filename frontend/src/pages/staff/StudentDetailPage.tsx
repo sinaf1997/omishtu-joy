@@ -13,7 +13,6 @@ import { Button } from '../../components/ui/button.js';
 import { Badge } from '../../components/ui/badge.js';
 import { CourseTypeBadge } from '../../components/academics/CourseTypeBadge.js';
 import { EnrollmentStatusBadge } from '../../components/academics/EnrollmentStatusBadge.js';
-import { EnrollmentSourceBadge } from '../../components/academics/EnrollmentSourceBadge.js';
 import { EnrollStudentModal } from '../../components/academics/EnrollStudentModal.js';
 import { DropEnrollmentModal } from '../../components/academics/DropEnrollmentModal.js';
 import {
@@ -21,8 +20,6 @@ import {
   Phone,
   Mail,
   MapPin,
-  Calendar,
-  IdCard,
   Printer,
   ArrowLeft,
   AlertCircle,
@@ -35,7 +32,6 @@ import {
   ListOrdered,
   Plus,
   Loader2,
-  Clock,
   ArrowUpRight,
 } from 'lucide-react';
 

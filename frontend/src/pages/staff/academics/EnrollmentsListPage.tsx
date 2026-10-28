@@ -23,9 +23,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ListOrdered,
-  BookOpen,
   ArrowUpRight,
-  Clock,
   Filter,
 } from 'lucide-react';
 

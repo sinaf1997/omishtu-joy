@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../hooks/useAuth.js';
-import { getCourseByIdApi } from '../../../api/courses.js';
+import { getCourseByIdApi, updateCourseStatusApi } from '../../../api/courses.js';
 import {
   getCourseRosterApi,
   promoteWaitlistEntryApi,
@@ -9,7 +9,7 @@ import {
   removeWaitlistEntryApi,
 } from '../../../api/enrollments.js';
 import { Course } from '../../../types/courses.js';
-import { CourseRoster, RosterEnrolledStudent, RosterWaitlistedStudent } from '../../../types/enrollments.js';
+import { CourseRoster } from '../../../types/enrollments.js';
 import { CourseTypeBadge } from '../../../components/academics/CourseTypeBadge.js';
 import { CourseStatusBadge } from '../../../components/academics/CourseStatusBadge.js';
 import { EnrollmentStatusBadge } from '../../../components/academics/EnrollmentStatusBadge.js';
@@ -32,7 +32,6 @@ import {
   Layers,
   UserCheck,
   UserPlus,
-  Trash2,
   ArrowUpRight,
   ListOrdered,
 } from 'lucide-react';
@@ -50,6 +49,9 @@ export const CourseDetailPage: React.FC = () => {
     user?.role === 'manager' ||
     user?.role === 'academic_admin' ||
     user?.role === 'receptionist';
+
+  const canChangeStatus = canManageCourse || canManageEnrollments;
+  const [openingCourse, setOpeningCourse] = useState(false);
 
   const [course, setCourse] = useState<Course | null>(null);
   const [roster, setRoster] = useState<CourseRoster | null>(null);
@@ -101,6 +103,25 @@ export const CourseDetailPage: React.FC = () => {
     fetchCourse();
     fetchRoster();
   }, [fetchCourse, fetchRoster]);
+
+  const handleQuickOpenCourse = async () => {
+    if (!course) return;
+    setActionError(null);
+    setOpeningCourse(true);
+    try {
+      await updateCourseStatusApi(course.id, 'open');
+      await fetchCourse();
+      await fetchRoster();
+    } catch (err: any) {
+      setActionError(
+        err?.response?.data?.error?.message ||
+        err?.message ||
+        'Failed to open course for enrollment'
+      );
+    } finally {
+      setOpeningCourse(false);
+    }
+  };
 
   const handlePromoteNext = async () => {
     if (!id) return;
@@ -205,7 +226,7 @@ export const CourseDetailPage: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2">
-          {canManageEnrollments && course.status === 'open' && (
+          {canManageEnrollments && course.status !== 'completed' && course.status !== 'cancelled' && (
             <button
               onClick={() => setIsEnrollModalOpen(true)}
               className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg transition-colors shadow-sm"
@@ -215,23 +236,24 @@ export const CourseDetailPage: React.FC = () => {
             </button>
           )}
 
+          {canChangeStatus && (
+            <button
+              onClick={() => setIsStatusModalOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-medium border border-border rounded-lg bg-card hover:bg-muted text-foreground transition-colors"
+            >
+              <RefreshCw className="w-3.5 h-3.5 text-primary" />
+              Change Status
+            </button>
+          )}
+
           {canManageCourse && (
-            <>
-              <button
-                onClick={() => setIsStatusModalOpen(true)}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-medium border border-border rounded-lg bg-card hover:bg-muted text-foreground transition-colors"
-              >
-                <RefreshCw className="w-3.5 h-3.5 text-primary" />
-                Change Status
-              </button>
-              <button
-                onClick={() => navigate(`/staff/academics/courses/${course.id}/edit`)}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-medium border border-border rounded-lg bg-card hover:bg-muted text-foreground transition-colors"
-              >
-                <Edit2 className="w-3.5 h-3.5" />
-                Edit
-              </button>
-            </>
+            <button
+              onClick={() => navigate(`/staff/academics/courses/${course.id}/edit`)}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-medium border border-border rounded-lg bg-card hover:bg-muted text-foreground transition-colors"
+            >
+              <Edit2 className="w-3.5 h-3.5" />
+              Edit
+            </button>
           )}
         </div>
       </div>
@@ -240,6 +262,29 @@ export const CourseDetailPage: React.FC = () => {
         <div className="flex items-start gap-3 rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-destructive text-sm">
           <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
           <span>{actionError}</span>
+        </div>
+      )}
+
+      {/* Quick Draft Activation Banner */}
+      {course.status === 'draft' && canManageEnrollments && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl border border-warning/30 bg-warning/10 text-xs">
+          <div className="flex items-center gap-2.5">
+            <AlertCircle className="w-5 h-5 text-warning shrink-0" />
+            <div>
+              <p className="font-semibold text-foreground text-sm">Course is currently in Draft status</p>
+              <p className="text-muted-foreground mt-0.5">
+                Open this course for enrollment so students can be registered and timetables activated.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handleQuickOpenCourse}
+            disabled={openingCourse}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-primary-foreground font-medium text-xs hover:bg-primary/90 transition-colors shadow-sm shrink-0 self-start sm:self-auto disabled:opacity-50"
+          >
+            {openingCourse ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+            Open for Enrollment Now
+          </button>
         </div>
       )}
 

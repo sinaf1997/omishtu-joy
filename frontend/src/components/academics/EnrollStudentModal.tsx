@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { listStudentsApi } from '../../api/students.js';
-import { listCoursesApi } from '../../api/courses.js';
+import {
+  listCoursesApi,
+  updateCourseStatusApi,
+  getCourseByIdApi,
+} from '../../api/courses.js';
 import {
   checkEnrollmentEligibilityApi,
   enrollStudentApi,
@@ -8,12 +12,12 @@ import {
 import { StudentRecord } from '../../types/students.js';
 import { Course } from '../../types/courses.js';
 import { EnrollmentCheckResult } from '../../types/enrollments.js';
-import { CourseTypeBadge } from './CourseTypeBadge.js';
 import {
   AlertCircle,
   CheckCircle2,
   Clock,
   Loader2,
+  RefreshCw,
   Search,
   UserCheck,
   X,
@@ -51,6 +55,7 @@ export const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({
   const [coursesList, setCoursesList] = useState<Course[]>([]);
   const [loadingCourses, setLoadingCourses] = useState(false);
   const [selectedCourseTitle, setSelectedCourseTitle] = useState(initialCourseTitle || '');
+  const [openingCourse, setOpeningCourse] = useState(false);
 
   // Eligibility check state
   const [checking, setChecking] = useState(false);
@@ -69,11 +74,20 @@ export const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({
       setCheckResult(null);
       setSubmitError(null);
 
-      // Load open courses
+      // Load available courses (open and draft, exclude completed and cancelled)
       setLoadingCourses(true);
-      listCoursesApi({ status: 'open', limit: 100 })
-        .then((res) => {
-          setCoursesList(res.courses || []);
+      listCoursesApi({ limit: 100 })
+        .then(async (res) => {
+          let list = (res.courses || []).filter(
+            (c) => c.status !== 'completed' && c.status !== 'cancelled'
+          );
+          if (initialCourseId && !list.some((c) => c.id === initialCourseId)) {
+            try {
+              const single = await getCourseByIdApi(initialCourseId);
+              if (single) list = [single, ...list];
+            } catch {}
+          }
+          setCoursesList(list);
         })
         .catch(() => {})
         .finally(() => setLoadingCourses(false));
@@ -124,9 +138,46 @@ export const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({
 
   if (!isOpen) return null;
 
+  const selectedCourse = coursesList.find((c) => c.id === courseId);
+  const isOnlyDraftBlocked = Boolean(
+    checkResult?.outcome === 'blocked' &&
+    checkResult.reasons.length === 1 &&
+    checkResult.reasons[0].toLowerCase().includes('status: draft')
+  );
+
+  const handleOpenCourse = async () => {
+    if (!courseId) return;
+    setOpeningCourse(true);
+    setSubmitError(null);
+    try {
+      await updateCourseStatusApi(courseId, 'open');
+      setCoursesList((prev) =>
+        prev.map((c) => (c.id === courseId ? { ...c, status: 'open' } : c))
+      );
+      if (studentId) {
+        setChecking(true);
+        const res = await checkEnrollmentEligibilityApi(studentId, courseId);
+        setCheckResult(res);
+      }
+    } catch (err: any) {
+      setSubmitError(
+        err?.response?.data?.error?.message ||
+        err?.message ||
+        'Failed to open course for enrollment'
+      );
+    } finally {
+      setOpeningCourse(false);
+      setChecking(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!studentId || !courseId || !checkResult || checkResult.outcome === 'blocked') {
+    if (!studentId || !courseId || !checkResult) {
+      return;
+    }
+
+    if (checkResult.outcome === 'blocked' && !isOnlyDraftBlocked) {
       return;
     }
 
@@ -134,10 +185,20 @@ export const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({
     setSubmitError(null);
 
     try {
+      // Auto-open draft course before enrolling
+      if (selectedCourse?.status === 'draft' || isOnlyDraftBlocked) {
+        await updateCourseStatusApi(courseId, 'open');
+        setCoursesList((prev) =>
+          prev.map((c) => (c.id === courseId ? { ...c, status: 'open' } : c))
+        );
+      }
+
       await enrollStudentApi({
         student_id: studentId,
         course_id: courseId,
-        join_waitlist_if_full: checkResult.outcome === 'waitlist',
+        join_waitlist_if_full:
+          checkResult.outcome === 'waitlist' ||
+          (checkResult.seats_left !== undefined && checkResult.seats_left <= 0),
       });
       onSuccess();
       onClose();
@@ -150,6 +211,26 @@ export const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const canSubmit =
+    !submitting &&
+    !checking &&
+    !openingCourse &&
+    Boolean(studentId) &&
+    Boolean(courseId) &&
+    checkResult !== null &&
+    (checkResult.outcome !== 'blocked' || isOnlyDraftBlocked);
+
+  let submitButtonLabel = 'Enroll Student';
+  if (isOnlyDraftBlocked && checkResult) {
+    submitButtonLabel =
+      checkResult?.outcome === 'waitlist' ||
+      (checkResult?.seats_left !== undefined && checkResult.seats_left <= 0)
+        ? 'Open Course & Join Waitlist'
+        : 'Open Course & Enroll Student';
+  } else if (checkResult?.outcome === 'waitlist') {
+    submitButtonLabel = 'Join Waitlist';
   };
 
   return (
@@ -287,16 +368,43 @@ export const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({
                 disabled={loadingCourses}
                 className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary disabled:opacity-50"
               >
-                <option value="">-- Choose an open course --</option>
+                <option value="">
+                  {loadingCourses ? '-- Loading courses... --' : '-- Choose an available course --'}
+                </option>
                 {coursesList.map((c) => {
                   const seatsLeft = Math.max(0, c.capacity - (c.enrolled_count || 0));
+                  const isDraft = c.status === 'draft';
                   return (
                     <option key={c.id} value={c.id}>
-                      [{c.code}] {c.title} ({c.course_type.toUpperCase()} • {seatsLeft} seat(s) left)
+                      [{c.code}] {c.title} ({c.course_type.toUpperCase()} • {isDraft ? 'Draft - Not yet opened' : `${seatsLeft} seat(s) left`})
                     </option>
                   );
                 })}
               </select>
+            )}
+
+            {selectedCourse?.status === 'draft' && (
+              <div className="mt-2.5 p-3 rounded-lg border border-warning/30 bg-warning/10 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                <div>
+                  <p className="font-semibold text-warning">Course in Draft Status</p>
+                  <p className="text-muted-foreground mt-0.5">
+                    This course hasn't been opened yet. You can open it now or it will automatically open when you enroll.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleOpenCourse}
+                  disabled={openingCourse || submitting}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground font-medium text-xs hover:bg-primary/90 transition-colors shrink-0 disabled:opacity-50 self-start sm:self-auto"
+                >
+                  {openingCourse ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <RefreshCw className="w-3.5 h-3.5" />
+                  )}
+                  Open Course Now
+                </button>
+              </div>
             )}
           </div>
 
@@ -334,7 +442,19 @@ export const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({
                 </div>
               )}
 
-              {checkResult.outcome === 'blocked' && (
+              {checkResult.outcome === 'blocked' && isOnlyDraftBlocked && (
+                <div className="border border-warning/30 bg-warning/10 text-warning-foreground p-3 rounded-lg space-y-1">
+                  <div className="flex items-center gap-2 font-semibold text-sm text-warning">
+                    <CheckCircle2 className="w-4 h-4 text-warning" />
+                    <span>Prerequisites & Timetable Verified</span>
+                  </div>
+                  <p className="text-xs text-foreground/80">
+                    No schedule clashes found. The course is currently in Draft status and will be opened automatically upon submitting enrollment.
+                  </p>
+                </div>
+              )}
+
+              {checkResult.outcome === 'blocked' && !isOnlyDraftBlocked && (
                 <div className="border-destructive/30 bg-destructive/10 text-destructive p-3 rounded-lg space-y-1.5">
                   <div className="flex items-center gap-2 font-semibold text-sm">
                     <AlertCircle className="w-4 h-4 shrink-0" />
@@ -362,22 +482,15 @@ export const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({
             </button>
             <button
               type="submit"
-              disabled={
-                submitting ||
-                checking ||
-                !studentId ||
-                !courseId ||
-                !checkResult ||
-                checkResult.outcome === 'blocked'
-              }
+              disabled={!canSubmit}
               className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                checkResult?.outcome === 'waitlist'
+                checkResult?.outcome === 'waitlist' && !isOnlyDraftBlocked
                   ? 'bg-warning text-warning-foreground hover:bg-warning/90'
                   : 'bg-primary text-primary-foreground hover:bg-primary/90'
               }`}
             >
-              {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
-              {checkResult?.outcome === 'waitlist' ? 'Join Waitlist' : 'Enroll Student'}
+              {(submitting || openingCourse) && <Loader2 className="w-4 h-4 animate-spin" />}
+              {submitButtonLabel}
             </button>
           </div>
         </form>

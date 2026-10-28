@@ -69,6 +69,7 @@ export interface CreateCoursePayload {
   capacity: number;
   trainer_id?: string | null;
   location?: string | null;
+  status?: CourseStatus;
   slots: CourseSlotInput[];
 }
 
