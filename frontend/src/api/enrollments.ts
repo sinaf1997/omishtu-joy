@@ -48,8 +48,13 @@ export async function dropEnrollmentApi(id: string, reason: string): Promise<Enr
   return response.data.data!.enrollment;
 }
 
-export async function getCourseRosterApi(courseId: string): Promise<CourseRoster> {
-  const response = await apiClient.get<ApiResponse<CourseRoster>>(`/courses/${courseId}/roster`);
+export async function getCourseRosterApi(
+  courseId: string,
+  source?: 'student_request' | 'course_full'
+): Promise<CourseRoster> {
+  const response = await apiClient.get<ApiResponse<CourseRoster>>(`/courses/${courseId}/roster`, {
+    params: source ? { source } : undefined,
+  });
   return response.data.data!;
 }
 
@@ -73,7 +78,7 @@ export async function promoteNextWaitlistEntryApi(
 
 export async function removeWaitlistEntryApi(
   waitlistEntryId: string,
-  reason?: string
+  reason: string
 ): Promise<WaitlistRecord> {
   const response = await apiClient.patch<ApiResponse<{ waitlist_entry: WaitlistRecord }>>(
     `/waitlist/${waitlistEntryId}/remove`,
@@ -126,4 +131,17 @@ export async function getWaitlistSummaryApi(): Promise<WaitlistSummaryCourse[]> 
     '/enrollments/waitlist-summary'
   );
   return response.data.data!;
+}
+
+export async function getPendingStudentRequestsCountApi(): Promise<number> {
+  const response = await apiClient.get<
+    ApiResponse<WaitlistSummaryCourse[]> & { pending_student_requests?: number }
+  >('/enrollments/waitlist-summary');
+  return (
+    response.data.pending_student_requests ??
+    (response.data.data || []).reduce(
+      (sum, i) => sum + (Number(i.pending_student_requests) || 0),
+      0
+    )
+  );
 }

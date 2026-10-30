@@ -55,6 +55,7 @@ import { StudentConsistencyPage } from '../pages/student/StudentConsistencyPage.
 import { ClassPlanPage } from '../pages/student/ClassPlanPage.js';
 import { StudentClassesPage } from '../pages/student/StudentClassesPage.js';
 import { StudentProgressPage } from '../pages/student/StudentProgressPage.js';
+import { BrowseCoursesPage } from '../pages/student/BrowseCoursesPage.js';
 
 // Helper component to redirect root /staff to the current staff role's dashboard
 const StaffRoleRedirect: React.FC = () => {
@@ -201,6 +202,7 @@ export const AppRoutes: React.FC = () => {
             <Route path="messages" element={<StudentMessagesPage />} />
             <Route path="consistency" element={<StudentConsistencyPage />} />
             <Route path="class-plan" element={<ClassPlanPage />} />
+            <Route path="courses" element={<BrowseCoursesPage />} />
             <Route path="classes" element={<StudentClassesPage />} />
             <Route path="progress" element={<StudentProgressPage />} />
           </Route>

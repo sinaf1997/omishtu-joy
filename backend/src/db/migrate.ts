@@ -132,6 +132,39 @@ export async function runMigrations(closePoolOnFinish: boolean = true): Promise<
       executedMigrations.delete('004_courses_and_enrollments.sql');
     }
 
+    // Check if waitlist_entries table exists and has request_source column
+    const [waitlistTableCheck] = await connection.query<RowDataPacket[]>(
+      `SELECT COUNT(*) as count FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'waitlist_entries'`
+    );
+    const waitlistTableExists = ((waitlistTableCheck[0] as { count?: number })?.count ?? 0) > 0;
+
+    if (waitlistTableExists) {
+      const [sourceColCheck] = await connection.query<RowDataPacket[]>(
+        `SELECT COUNT(*) as count FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'waitlist_entries' AND COLUMN_NAME = 'request_source'`
+      );
+      const sourceColExists = ((sourceColCheck[0] as { count?: number })?.count ?? 0) > 0;
+
+      if (!sourceColExists) {
+        console.warn('⚠️ Table "waitlist_entries" lacks "request_source" column. Adding column and index...');
+        await connection.query(`
+          ALTER TABLE waitlist_entries 
+          ADD COLUMN request_source ENUM('course_full', 'student_request') NOT NULL DEFAULT 'course_full' AFTER status
+        `);
+        try {
+          await connection.query(`
+            ALTER TABLE waitlist_entries 
+            ADD INDEX idx_waitlist_entries_course_status_source (course_id, status, request_source)
+          `);
+        } catch {
+          // Index may already exist or conflict safely ignored
+        }
+      }
+    } else if (executedMigrations.has('004_courses_and_enrollments.sql')) {
+      console.warn('⚠️ Table "waitlist_entries" missing. Re-applying 004_courses_and_enrollments.sql...');
+      await connection.query(`DELETE FROM _migrations WHERE name = '004_courses_and_enrollments.sql'`);
+      executedMigrations.delete('004_courses_and_enrollments.sql');
+    }
+
     // 4. Read migration files
     const migrationsDir = path.resolve(__dirname, 'migrations');
     const files = await fs.readdir(migrationsDir);

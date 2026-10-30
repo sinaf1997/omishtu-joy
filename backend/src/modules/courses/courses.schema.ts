@@ -116,6 +116,7 @@ export const createCourseSchema = z
       .max(500, 'Capacity cannot exceed 500 students'),
     trainer_id: z.string().trim().nullable().optional(),
     location: z.string().trim().max(100, 'Location cannot exceed 100 characters').nullable().optional(),
+    status: z.enum(['draft', 'open']).optional().default('draft'),
     slots: z
       .array(scheduleSlotSchema)
       .min(1, 'A course must have at least one weekly timetable slot'),

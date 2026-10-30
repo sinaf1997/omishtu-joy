@@ -6,6 +6,7 @@ import {
   dropEnrollmentSchema,
   removeWaitlistSchema,
   listEnrollmentsQuerySchema,
+  rosterQuerySchema,
 } from './enrollments.schema.js';
 import {
   enrollmentsService,
@@ -185,7 +186,15 @@ export const enrollmentsController = {
   async getWaitlistSummary(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const result = await enrollmentsService.getWaitlistSummary();
-      res.status(200).json({ data: result });
+      const totalPending = result.reduce(
+        (sum, item) => sum + (Number(item.pending_student_requests) || 0),
+        0
+      );
+      res.status(200).json({
+        data: result,
+        pending_student_requests: totalPending,
+        total_pending_student_requests: totalPending,
+      });
     } catch (err) {
       handleControllerError(err, res, next);
     }

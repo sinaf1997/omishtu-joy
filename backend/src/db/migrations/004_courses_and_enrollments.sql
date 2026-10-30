@@ -1,6 +1,6 @@
 -- ==============================================================================
 -- Migration: 004_courses_and_enrollments.sql
--- Sprint: S3 (Part 1 & 2)
+-- Sprint: S3 (Part 1, 2 & 3)
 -- Description: Course catalog, timetables, student enrollments, and waitlists
 -- ==============================================================================
 
@@ -75,6 +75,7 @@ CREATE TABLE IF NOT EXISTS waitlist_entries (
   student_id VARCHAR(36) NOT NULL,
   course_id VARCHAR(36) NOT NULL,
   status ENUM('waiting', 'promoted', 'removed') NOT NULL DEFAULT 'waiting',
+  request_source ENUM('course_full', 'student_request') NOT NULL DEFAULT 'course_full',
   added_by_staff_id VARCHAR(36) NULL,
   joined_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   resolved_at TIMESTAMP NULL,
@@ -85,6 +86,7 @@ CREATE TABLE IF NOT EXISTS waitlist_entries (
   PRIMARY KEY (id),
   CONSTRAINT uq_waitlist_entries_student_course UNIQUE (student_id, course_id),
   INDEX idx_waitlist_entries_course_status (course_id, status),
+  INDEX idx_waitlist_entries_course_status_source (course_id, status, request_source),
   CONSTRAINT fk_waitlist_entries_student FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE,
   CONSTRAINT fk_waitlist_entries_course FOREIGN KEY (course_id) REFERENCES courses (id) ON DELETE CASCADE,
   CONSTRAINT fk_waitlist_entries_added_by_staff FOREIGN KEY (added_by_staff_id) REFERENCES staff (id) ON DELETE SET NULL,

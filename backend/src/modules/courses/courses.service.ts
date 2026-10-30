@@ -96,7 +96,7 @@ export const coursesService = {
         capacity: data.capacity,
         trainer_id: data.trainer_id || null,
         location: data.location || null,
-        status: 'draft',
+        status: data.status || 'draft',
         created_by_staff_id: staffId || null,
       },
       slotRecords

@@ -10,6 +10,7 @@ import {
   CourseType,
   CourseSlotInput,
   TrainerOption,
+  CourseStatus,
 } from '../../../types/courses.js';
 import { WeeklyTimetableGrid } from '../../../components/academics/WeeklyTimetableGrid.js';
 import {
@@ -58,6 +59,7 @@ export const CourseFormPage: React.FC = () => {
   const [endDate, setEndDate] = useState('');
   const [capacity, setCapacity] = useState<number>(30);
   const [trainerId, setTrainerId] = useState<string>('');
+  const [status, setStatus] = useState<CourseStatus>('open');
   const [trainers, setTrainers] = useState<TrainerOption[]>([]);
 
   // Weekly timetable state
@@ -216,6 +218,7 @@ export const CourseFormPage: React.FC = () => {
         capacity: Number(capacity),
         trainer_id: trainerId || null,
         location: location.trim() || null,
+        status,
         slots: slots.map((s) => ({
           day_of_week: Number(s.day_of_week),
           start_time: s.start_time,
@@ -492,6 +495,43 @@ export const CourseFormPage: React.FC = () => {
                 ))}
               </select>
             </div>
+
+            {!isEdit && (
+              <div className="sm:col-span-2 pt-2 border-t border-border">
+                <label className="block text-xs font-medium text-foreground mb-1.5">
+                  Course Availability Status
+                </label>
+                <div className="grid grid-cols-2 gap-3 p-1.5 rounded-xl bg-muted/40 border border-border">
+                  <button
+                    type="button"
+                    onClick={() => setStatus('open')}
+                    className={`py-2 text-xs font-semibold rounded-lg transition-all ${
+                      status === 'open'
+                        ? 'bg-primary text-primary-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    Open for Enrollment (Default)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStatus('draft')}
+                    className={`py-2 text-xs font-semibold rounded-lg transition-all ${
+                      status === 'draft'
+                        ? 'bg-primary text-primary-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    Save as Draft
+                  </button>
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  {status === 'open'
+                    ? '✓ Course will be immediately available in the enrollment options list.'
+                    : '⚠️ Draft courses cannot accept student enrollments until opened.'}
+                </p>
+              </div>
+            )}
           </div>
         </div>
 

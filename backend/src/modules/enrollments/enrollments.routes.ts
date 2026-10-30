@@ -23,6 +23,8 @@ const waitlistRouter = Router();
 waitlistRouter.use(authGuard);
 waitlistRouter.use(requirePortal('staff'));
 
+waitlistRouter.get('/summary', requirePermission('courses:read'), enrollmentsController.getWaitlistSummary);
+
 waitlistRouter.post('/:id/promote', requirePermission('enrollments:manage'), enrollmentsController.promoteWaitlistEntry);
 waitlistRouter.patch('/:id/remove', requirePermission('enrollments:manage'), enrollmentsController.removeWaitlistEntry);
 waitlistRouter.delete('/:id', requirePermission('enrollments:manage'), enrollmentsController.removeWaitlistEntry);

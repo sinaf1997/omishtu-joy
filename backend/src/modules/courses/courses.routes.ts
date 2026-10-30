@@ -20,7 +20,7 @@ router.get('/:id', requirePermission('courses:read'), coursesController.getCours
 // Manage endpoints (courses:manage / enrollments:manage)
 router.post('/:id/waitlist/promote-next', requirePermission('enrollments:manage'), enrollmentsController.promoteNextWaitlistEntry);
 router.post('/', requirePermission('courses:manage'), coursesController.createCourse);
-router.patch('/:id/status', requirePermission('courses:manage'), coursesController.updateStatus);
+router.patch('/:id/status', requirePermission('courses:manage', 'enrollments:manage'), coursesController.updateStatus);
 router.patch('/:id', requirePermission('courses:manage'), coursesController.updateCourse);
 
 export const coursesRouter = router;
