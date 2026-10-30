@@ -5,12 +5,14 @@ import {
   MAX_ACTIVE_ELECTIVES_PER_STUDENT,
   MAX_WAITLIST_PER_COURSE,
   AUTO_PROMOTE_WAITLIST,
+  STAFF_CAN_ENROLL_ELECTIVES,
 } from '../../config/enrollmentRules.js';
 import { enrollmentsRepository } from './enrollments.repository.js';
 import {
   EnrollmentCheckResult,
   EnrollmentRecord,
   WaitlistRecord,
+  WaitlistRequestSource,
   CourseRoster,
   StudentEnrollmentItem,
   StudentWaitlistItem,
@@ -257,6 +259,12 @@ export const enrollmentsService = {
       const course = await enrollmentsRepository.lockCourseForUpdate(courseId, connection);
       if (!course) {
         throw new EnrollmentNotFoundError('Course not found');
+      }
+
+      if (!STAFF_CAN_ENROLL_ELECTIVES && course.course_type === 'elective') {
+        throw new EnrollmentBadRequestError(
+          "Electives are selected by the student. Approve the student's request from the waitlist."
+        );
       }
 
       // Evaluate eligibility inside the lock
@@ -525,7 +533,7 @@ export const enrollmentsService = {
   /**
    * Returns course roster (enrolled active students and waiting students with waitlist positions).
    */
-  async getCourseRoster(courseId: string): Promise<CourseRoster> {
+  async getCourseRoster(courseId: string, sourceFilter?: WaitlistRequestSource): Promise<CourseRoster> {
     const { course } = await enrollmentsRepository.findCourseWithSlots(courseId);
     if (!course) {
       throw new EnrollmentNotFoundError('Course not found');
@@ -535,7 +543,7 @@ export const enrollmentsService = {
     const waitlistCount = await enrollmentsRepository.getWaitlistCountByCourseId(courseId);
     const seatsLeft = Math.max(0, course.capacity - enrolledCount);
 
-    const roster = await enrollmentsRepository.getCourseRoster(courseId);
+    const roster = await enrollmentsRepository.getCourseRoster(courseId, sourceFilter);
 
     return {
       course: {

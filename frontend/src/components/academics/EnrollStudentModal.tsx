@@ -79,7 +79,7 @@ export const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({
       listCoursesApi({ limit: 100 })
         .then(async (res) => {
           let list = (res.courses || []).filter(
-            (c) => c.status !== 'completed' && c.status !== 'cancelled'
+            (c) => c.status !== 'completed' && c.status !== 'cancelled' && c.course_type === 'major'
           );
           if (initialCourseId && !list.some((c) => c.id === initialCourseId)) {
             try {
@@ -369,7 +369,7 @@ export const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({
                 className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary disabled:opacity-50"
               >
                 <option value="">
-                  {loadingCourses ? '-- Loading courses... --' : '-- Choose an available course --'}
+                  {loadingCourses ? '-- Loading major courses... --' : '-- Choose an available major course --'}
                 </option>
                 {coursesList.map((c) => {
                   const seatsLeft = Math.max(0, c.capacity - (c.enrolled_count || 0));
@@ -382,6 +382,10 @@ export const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({
                 })}
               </select>
             )}
+
+            <p className="text-[11px] text-muted-foreground mt-1.5">
+              ℹ️ Electives are selected by the student in their portal. Only major courses can be enrolled here.
+            </p>
 
             {selectedCourse?.status === 'draft' && (
               <div className="mt-2.5 p-3 rounded-lg border border-warning/30 bg-warning/10 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">

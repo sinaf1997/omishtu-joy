@@ -16,7 +16,11 @@ export const dropEnrollmentSchema = z.object({
 });
 
 export const removeWaitlistSchema = z.object({
-  reason: z.string().trim().optional(),
+  reason: z
+    .string()
+    .trim()
+    .min(3, 'Rejection reason must be at least 3 characters')
+    .max(255, 'Rejection reason cannot exceed 255 characters'),
 });
 
 export const listEnrollmentsQuerySchema = z.object({
@@ -28,8 +32,13 @@ export const listEnrollmentsQuerySchema = z.object({
   search: z.string().optional(),
 });
 
+export const rosterQuerySchema = z.object({
+  source: z.enum(['student_request', 'course_full']).optional(),
+});
+
 export type CheckEnrollmentInput = z.infer<typeof checkEnrollmentSchema>;
 export type CreateEnrollmentInput = z.infer<typeof createEnrollmentSchema>;
 export type DropEnrollmentInput = z.infer<typeof dropEnrollmentSchema>;
 export type RemoveWaitlistInput = z.infer<typeof removeWaitlistSchema>;
 export type ListEnrollmentsQuery = z.infer<typeof listEnrollmentsQuerySchema>;
+export type RosterQuery = z.infer<typeof rosterQuerySchema>;

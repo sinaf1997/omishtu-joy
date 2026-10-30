@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
-import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth.js';
 import { StaffRole } from '../../types/auth.js';
 import { getNavItemsForRole, NAV_SECTIONS, NavSection } from '../../config/navigation.js';
+import { getPendingStudentRequestsCountApi } from '../../api/enrollments.js';
 import { ThemeToggle } from '../ThemeToggle.js';
 import {
   Layers,
@@ -30,7 +31,15 @@ function getInitials(name?: string | null, email?: string | null): string {
 export const StaffLayout: React.FC = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [pendingRequestsCount, setPendingRequestsCount] = useState<number>(0);
+
+  useEffect(() => {
+    getPendingStudentRequestsCountApi()
+      .then((count) => setPendingRequestsCount(count))
+      .catch(() => {});
+  }, [location.pathname]);
 
   const handleLogout = () => {
     logout();
@@ -108,15 +117,22 @@ export const StaffLayout: React.FC = () => {
                         }`
                       }
                     >
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
                         <Icon className="h-4 w-4 shrink-0" />
-                        <span>{item.label}</span>
+                        <span className="truncate">{item.label}</span>
                       </div>
-                      {!item.isFunctional && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-secondary text-secondary-foreground font-semibold group-hover:bg-card">
-                          S{item.sprint}
-                        </span>
-                      )}
+                      <div className="flex items-center gap-1.5">
+                        {item.id === 'academics-enrollments' && pendingRequestsCount > 0 && (
+                          <span className="px-1.5 py-0.5 rounded-full bg-primary text-primary-foreground font-bold text-[10px] shadow-sm">
+                            {pendingRequestsCount}
+                          </span>
+                        )}
+                        {!item.isFunctional && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-secondary text-secondary-foreground font-semibold group-hover:bg-card">
+                            S{item.sprint}
+                          </span>
+                        )}
+                      </div>
                     </NavLink>
                   );
                 })}

@@ -2,9 +2,11 @@ import crypto from 'crypto';
 import { RowDataPacket, PoolConnection } from 'mysql2/promise';
 import { getDatabasePool } from '../../config/database.js';
 import { buildSlotSummary } from '../courses/courses.repository.js';
+import { ensureWaitlistSchema } from '../student/student.repository.js';
 import {
   EnrollmentRecord,
   WaitlistRecord,
+  WaitlistRequestSource,
   RosterEnrolledStudent,
   RosterWaitlistedStudent,
   StudentEnrollmentItem,
@@ -308,14 +310,17 @@ export const enrollmentsRepository = {
       student_id: string;
       course_id: string;
       staff_id?: string;
+      request_source?: WaitlistRequestSource;
     },
     connection: PoolConnection
   ): Promise<WaitlistRecord> {
     const existing = await this.findWaitlistByStudentAndCourse(params.student_id, params.course_id, connection);
+    const source = params.request_source || 'course_full';
     if (existing) {
       await connection.query(
         `UPDATE waitlist_entries
          SET status = 'waiting',
+             request_source = ?,
              joined_at = CURRENT_TIMESTAMP,
              added_by_staff_id = ?,
              resolved_at = NULL,
@@ -323,7 +328,7 @@ export const enrollmentsRepository = {
              removal_reason = NULL,
              updated_at = CURRENT_TIMESTAMP
          WHERE id = ?`,
-        [params.staff_id || null, existing.id]
+        [source, params.staff_id || null, existing.id]
       );
       const [updated] = await connection.query<(WaitlistRecord & RowDataPacket)[]>(
         `SELECT * FROM waitlist_entries WHERE id = ? LIMIT 1`,
@@ -333,9 +338,9 @@ export const enrollmentsRepository = {
     } else {
       const id = crypto.randomUUID();
       await connection.query(
-        `INSERT INTO waitlist_entries (id, student_id, course_id, status, added_by_staff_id, joined_at)
-         VALUES (?, ?, ?, 'waiting', ?, CURRENT_TIMESTAMP)`,
-        [id, params.student_id, params.course_id, params.staff_id || null]
+        `INSERT INTO waitlist_entries (id, student_id, course_id, status, request_source, added_by_staff_id, joined_at)
+         VALUES (?, ?, ?, 'waiting', ?, ?, CURRENT_TIMESTAMP)`,
+        [id, params.student_id, params.course_id, source, params.staff_id || null]
       );
       const [created] = await connection.query<(WaitlistRecord & RowDataPacket)[]>(
         `SELECT * FROM waitlist_entries WHERE id = ? LIMIT 1`,
@@ -424,10 +429,14 @@ export const enrollmentsRepository = {
     return rows[0] || null;
   },
 
-  async getCourseRoster(courseId: string): Promise<{
+  async getCourseRoster(
+    courseId: string,
+    sourceFilter?: WaitlistRequestSource
+  ): Promise<{
     enrolled: RosterEnrolledStudent[];
     waitlist: RosterWaitlistedStudent[];
   }> {
+    await ensureWaitlistSchema();
     const pool = getDatabasePool();
 
     // Enrolled active students
@@ -444,17 +453,26 @@ export const enrollmentsRepository = {
     );
 
     // Waiting students ordered by joined_at ASC with position
-    const [waitlistRows] = await pool.query<(RosterWaitlistedStudent & RowDataPacket)[]>(
-      `SELECT w.id, w.student_id, s.student_code,
+    let waitlistSql = `SELECT w.id, w.student_id, s.student_code,
               TRIM(CONCAT(s.first_name, ' ', COALESCE(s.last_name, ''))) as full_name,
               s.email, s.phone,
-              w.status, w.joined_at, w.removal_reason,
+              w.status, w.request_source, w.joined_at, w.removal_reason,
               ROW_NUMBER() OVER (ORDER BY w.joined_at ASC) as position
        FROM waitlist_entries w
        JOIN students s ON w.student_id = s.id
-       WHERE w.course_id = ? AND w.status = 'waiting'
-       ORDER BY w.joined_at ASC`,
-      [courseId]
+       WHERE w.course_id = ? AND w.status = 'waiting'`;
+    const waitlistParams: unknown[] = [courseId];
+
+    if (sourceFilter) {
+      waitlistSql += ` AND w.request_source = ?`;
+      waitlistParams.push(sourceFilter);
+    }
+
+    waitlistSql += ` ORDER BY w.joined_at ASC`;
+
+    const [waitlistRows] = await pool.query<(RosterWaitlistedStudent & RowDataPacket)[]>(
+      waitlistSql,
+      waitlistParams
     );
 
     return {
@@ -467,6 +485,7 @@ export const enrollmentsRepository = {
     enrollments: StudentEnrollmentItem[];
     waitlist: StudentWaitlistItem[];
   }> {
+    await ensureWaitlistSchema();
     const pool = getDatabasePool();
 
     // Fetch enrollments with course details
@@ -508,13 +527,14 @@ export const enrollmentsRepository = {
       start_date: string;
       end_date: string;
       status: WaitlistStatus;
+      request_source: WaitlistRequestSource;
       joined_at: string;
     })[]>(
       `SELECT w.id, c.id as course_id, c.code as course_code, c.title as course_title,
               c.course_type, c.status as course_status,
               DATE_FORMAT(c.start_date, '%Y-%m-%d') as start_date,
               DATE_FORMAT(c.end_date, '%Y-%m-%d') as end_date,
-              w.status, w.joined_at
+              w.status, w.request_source, w.joined_at
        FROM waitlist_entries w
        JOIN courses c ON w.course_id = c.id
        WHERE w.student_id = ? AND w.status = 'waiting'
@@ -574,6 +594,7 @@ export const enrollmentsRepository = {
         end_date: r.end_date,
         slot_summary: buildSlotSummary(slotMap.get(r.course_id) || []),
         status: r.status,
+        request_source: r.request_source,
         joined_at: r.joined_at,
         position: position ?? i + 1,
       });
@@ -643,12 +664,14 @@ export const enrollmentsRepository = {
   },
 
   async getWaitlistSummary(): Promise<WaitlistSummaryCourse[]> {
+    await ensureWaitlistSchema();
     const pool = getDatabasePool();
     const [rows] = await pool.query<(WaitlistSummaryCourse & RowDataPacket)[]>(
       `SELECT c.id as course_id, c.code as course_code, c.title as course_title,
               c.course_type, c.capacity,
               (SELECT COUNT(*) FROM enrollments e WHERE e.course_id = c.id AND e.status = 'active') as enrolled_count,
               COUNT(w.id) as waiting_count,
+              COALESCE(SUM(CASE WHEN w.request_source = 'student_request' THEN 1 ELSE 0 END), 0) as pending_student_requests,
               MIN(w.joined_at) as oldest_waiting_at
        FROM waitlist_entries w
        JOIN courses c ON w.course_id = c.id
@@ -656,7 +679,12 @@ export const enrollmentsRepository = {
        GROUP BY c.id, c.code, c.title, c.course_type, c.capacity
        ORDER BY waiting_count DESC, oldest_waiting_at ASC`
     );
-    return rows;
+    return rows.map((r) => ({
+      ...r,
+      enrolled_count: Number(r.enrolled_count || 0),
+      waiting_count: Number(r.waiting_count || 0),
+      pending_student_requests: Number(r.pending_student_requests || 0),
+    }));
   },
 
   async handleCourseStatusChange(courseId: string, newStatus: string): Promise<void> {

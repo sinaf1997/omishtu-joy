@@ -22,7 +22,9 @@
     "migrate": "npm run migrate --workspace=backend",
     "seed": "npm run seed --workspace=backend",
     "db:migrate": "npm run migrate --workspace=backend",
-    "db:seed": "npm run seed --workspace=backend"
+    "db:seed": "npm run seed --workspace=backend",
+    "seed:system": "npm run seed:system --workspace=backend",
+    "db:reset": "npm run db:reset --workspace=backend"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"

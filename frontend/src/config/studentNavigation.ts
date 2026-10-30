@@ -7,6 +7,7 @@ import {
   MessageSquare,
   TrendingUp,
   CalendarDays,
+  Compass,
   BookOpen,
   Award,
 } from 'lucide-react';
@@ -62,12 +63,21 @@ export const STUDENT_NAV_ITEMS: StudentNavItem[] = [
     label: 'Class Plan',
     path: '/student/class-plan',
     icon: CalendarDays,
+    isReal: true,
+  },
+  {
+    id: 'student-courses',
+    label: 'Browse Courses',
+    path: '/student/courses',
+    icon: Compass,
+    isReal: true,
   },
   {
     id: 'student-classes',
     label: 'Classes',
     path: '/student/classes',
     icon: BookOpen,
+    isReal: true,
   },
   {
     id: 'student-progress',

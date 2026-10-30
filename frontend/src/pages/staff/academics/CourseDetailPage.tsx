@@ -6,7 +6,6 @@ import {
   getCourseRosterApi,
   promoteWaitlistEntryApi,
   promoteNextWaitlistEntryApi,
-  removeWaitlistEntryApi,
 } from '../../../api/enrollments.js';
 import { Course } from '../../../types/courses.js';
 import { CourseRoster } from '../../../types/enrollments.js';
@@ -17,6 +16,7 @@ import { EnrollmentSourceBadge } from '../../../components/academics/EnrollmentS
 import { WeeklyTimetableGrid } from '../../../components/academics/WeeklyTimetableGrid.js';
 import { ChangeStatusModal } from '../../../components/academics/ChangeStatusModal.js';
 import { EnrollStudentModal } from '../../../components/academics/EnrollStudentModal.js';
+import { RejectWaitlistModal } from '../../../components/academics/RejectWaitlistModal.js';
 import { DropEnrollmentModal } from '../../../components/academics/DropEnrollmentModal.js';
 import {
   ArrowLeft,
@@ -67,6 +67,8 @@ export const CourseDetailPage: React.FC = () => {
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
   const [isEnrollModalOpen, setIsEnrollModalOpen] = useState(false);
   const [dropTarget, setDropTarget] = useState<{ id: string; studentName: string } | null>(null);
+  const [rejectTarget, setRejectTarget] = useState<{ id: string; studentName: string } | null>(null);
+  const [sourceFilter, setSourceFilter] = useState<'all' | 'student_request' | 'course_full'>('all');
 
   const fetchCourse = useCallback(async () => {
     if (!id) return;
@@ -90,14 +92,14 @@ export const CourseDetailPage: React.FC = () => {
     if (!id) return;
     setRosterLoading(true);
     try {
-      const data = await getCourseRosterApi(id);
+      const data = await getCourseRosterApi(id, sourceFilter === 'all' ? undefined : sourceFilter);
       setRoster(data);
     } catch (err) {
       console.error('Failed to load course roster:', err);
     } finally {
       setRosterLoading(false);
     }
-  }, [id]);
+  }, [id, sourceFilter]);
 
   useEffect(() => {
     fetchCourse();
@@ -140,6 +142,12 @@ export const CourseDetailPage: React.FC = () => {
   };
 
   const handlePromoteEntry = async (waitlistId: string) => {
+    if (course && enrolledCount >= course.capacity) {
+      setActionError(
+        `Cannot approve: course is full (${enrolledCount}/${course.capacity}). Raise the course capacity to approve this student.`
+      );
+      return;
+    }
     setActionError(null);
     try {
       await promoteWaitlistEntryApi(waitlistId);
@@ -149,24 +157,11 @@ export const CourseDetailPage: React.FC = () => {
       setActionError(
         err?.response?.data?.error?.message ||
         err?.message ||
-        'Failed to promote student.'
+        'Failed to approve student request.'
       );
     }
   };
 
-  const handleRemoveWaitlist = async (waitlistId: string) => {
-    setActionError(null);
-    try {
-      await removeWaitlistEntryApi(waitlistId, 'Removed by staff request');
-      await fetchRoster();
-    } catch (err: any) {
-      setActionError(
-        err?.response?.data?.error?.message ||
-        err?.message ||
-        'Failed to remove waitlist entry.'
-      );
-    }
-  };
 
   if (loading) {
     return (
@@ -555,22 +550,75 @@ export const CourseDetailPage: React.FC = () => {
                 Waitlist Queue ({roster?.waitlist.length || 0})
               </h3>
               <p className="text-xs text-muted-foreground">
-                Ordered chronologically by joined date. Capacity status: {enrolledCount} / {course.capacity}.
+                Strict chronological order (oldest first). Capacity status: {enrolledCount} / {course.capacity}.
               </p>
             </div>
 
-            <div className="flex items-center gap-2 self-start">
+            <div className="flex items-center gap-2 self-start flex-wrap">
+              {/* Source Filter */}
+              <div className="flex items-center rounded-lg border border-border bg-card p-0.5 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setSourceFilter('all')}
+                  className={`px-2.5 py-1 rounded-md transition-colors ${
+                    sourceFilter === 'all'
+                      ? 'bg-primary text-primary-foreground font-medium'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  All
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSourceFilter('student_request')}
+                  className={`px-2.5 py-1 rounded-md transition-colors ${
+                    sourceFilter === 'student_request'
+                      ? 'bg-primary text-primary-foreground font-medium'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  Student Requests
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSourceFilter('course_full')}
+                  className={`px-2.5 py-1 rounded-md transition-colors ${
+                    sourceFilter === 'course_full'
+                      ? 'bg-primary text-primary-foreground font-medium'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  Course Full
+                </button>
+              </div>
+
               {canManageEnrollments && waitlistCount > 0 && enrolledCount < course.capacity && (
                 <button
                   onClick={handlePromoteNext}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shadow-sm"
                 >
                   <ArrowUpRight className="w-3.5 h-3.5" />
-                  Promote Next Student
+                  Approve Next in Queue
                 </button>
               )}
             </div>
           </div>
+
+          {enrolledCount >= course.capacity && waitlistCount > 0 && (
+            <div className="flex items-center justify-between p-3 rounded-lg border border-warning/30 bg-warning/10 text-xs">
+              <span className="text-foreground">
+                Course is at full capacity ({enrolledCount}/{course.capacity}). To approve waiting students, increase capacity or drop an enrolled student.
+              </span>
+              {canManageCourse && (
+                <button
+                  onClick={() => navigate(`/staff/academics/courses/${course.id}/edit`)}
+                  className="px-2.5 py-1 rounded-md bg-warning text-warning-foreground font-medium text-xs hover:bg-warning/90 transition-colors shrink-0 ml-2"
+                >
+                  Edit Capacity
+                </button>
+              )}
+            </div>
+          )}
 
           {rosterLoading ? (
             <div className="p-8 text-center text-muted-foreground">
@@ -581,7 +629,9 @@ export const CourseDetailPage: React.FC = () => {
               <ListOrdered className="w-8 h-8 text-muted-foreground mx-auto" />
               <p className="text-sm font-medium text-foreground">Waitlist is empty</p>
               <p className="text-xs text-muted-foreground">
-                When this course reaches full capacity, additional students joining will appear here in queue.
+                {sourceFilter !== 'all'
+                  ? 'No entries match the selected source filter.'
+                  : 'When this course reaches full capacity or students request electives, queue entries appear here.'}
               </p>
             </div>
           ) : (
@@ -592,6 +642,7 @@ export const CourseDetailPage: React.FC = () => {
                     <tr>
                       <th className="py-3 px-4">Queue #</th>
                       <th className="py-3 px-4">Student</th>
+                      <th className="py-3 px-4">Source</th>
                       <th className="py-3 px-4">Contact</th>
                       <th className="py-3 px-4">Joined Date</th>
                       {canManageEnrollments && <th className="py-3 px-4 text-right">Actions</th>}
@@ -617,6 +668,17 @@ export const CourseDetailPage: React.FC = () => {
                             <p className="text-xs font-mono text-muted-foreground">{entry.student_code}</p>
                           </button>
                         </td>
+                        <td className="py-3 px-4">
+                          {entry.request_source === 'student_request' ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-primary/10 text-primary border border-primary/20">
+                              Student request
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-secondary text-secondary-foreground border border-border">
+                              Course full
+                            </span>
+                          )}
+                        </td>
                         <td className="py-3 px-4 text-xs text-muted-foreground">
                           <div>{entry.email || '—'}</div>
                           <div>{entry.phone || '—'}</div>
@@ -626,24 +688,29 @@ export const CourseDetailPage: React.FC = () => {
                         </td>
                         {canManageEnrollments && (
                           <td className="py-3 px-4 text-right">
-                            <div className="inline-flex items-center gap-3">
+                            <div className="inline-flex items-center gap-2">
                               <button
                                 onClick={() => handlePromoteEntry(entry.id)}
                                 disabled={enrolledCount >= course.capacity}
                                 title={
                                   enrolledCount >= course.capacity
-                                    ? 'Cannot promote: course is full'
-                                    : 'Promote student to active enrollment'
+                                    ? 'Cannot approve: course is full. Raise capacity first.'
+                                    : 'Approve student request'
                                 }
-                                className="text-xs font-medium text-primary hover:underline disabled:opacity-40 disabled:cursor-not-allowed"
+                                className="px-2.5 py-1 text-xs font-semibold rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed shadow-xs"
                               >
-                                Promote
+                                Approve
                               </button>
                               <button
-                                onClick={() => handleRemoveWaitlist(entry.id)}
-                                className="text-xs font-medium text-destructive hover:underline"
+                                onClick={() =>
+                                  setRejectTarget({
+                                    id: entry.id,
+                                    studentName: entry.full_name,
+                                  })
+                                }
+                                className="px-2.5 py-1 text-xs font-semibold rounded-md border border-destructive/30 text-destructive hover:bg-destructive/10 transition-colors shadow-xs"
                               >
-                                Remove
+                                Reject
                               </button>
                             </div>
                           </td>
@@ -678,6 +745,21 @@ export const CourseDetailPage: React.FC = () => {
           onClose={() => setIsEnrollModalOpen(false)}
           initialCourseId={course.id}
           initialCourseTitle={`[${course.code}] ${course.title}`}
+          onSuccess={() => {
+            fetchCourse();
+            fetchRoster();
+          }}
+        />
+      )}
+
+      {/* Reject Waitlist Modal */}
+      {rejectTarget && (
+        <RejectWaitlistModal
+          isOpen={!!rejectTarget}
+          onClose={() => setRejectTarget(null)}
+          waitlistId={rejectTarget.id}
+          studentName={rejectTarget.studentName}
+          courseTitle={course?.title}
           onSuccess={() => {
             fetchCourse();
             fetchRoster();

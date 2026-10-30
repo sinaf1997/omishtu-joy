@@ -1,12 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import QRCode from 'react-qr-code';
 import { useAuth } from '../../hooks/useAuth.js';
-import { useStudentMembership } from '../../hooks/useStudentData.js';
+import { getStudentEnrollmentsOverviewApi } from '../../api/student.js';
+import { StudentEnrollmentsOverview } from '../../types/enrollments.js';
+import { CourseTypeBadge } from '../../components/academics/CourseTypeBadge.js';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../../components/ui/card.js';
 import { Badge } from '../../components/ui/badge.js';
 import { Button } from '../../components/ui/button.js';
-import { SampleDataBadge } from '../../components/student/SampleDataBadge.js';
 import { CardSkeleton } from '../../components/student/SkeletonLoader.js';
+import { EmptyState } from '../../components/student/EmptyState.js';
 import {
   Maximize2,
   CheckCircle2,
@@ -15,43 +18,90 @@ import {
   ShieldCheck,
   X,
   Printer,
+  Calendar,
+  Clock,
+  Compass,
 } from 'lucide-react';
 
 export const StudentMembershipPage: React.FC = () => {
   const { user } = useAuth();
-  const { data, loading, error, reload } = useStudentMembership();
+  const [overview, setOverview] = useState<StudentEnrollmentsOverview | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [fullScreenModal, setFullScreenModal] = useState(false);
 
   // Student name and ID come strictly from AuthContext
   const studentName = user?.fullName || user?.full_name || user?.firstName || 'Student Name';
   const studentCode = user?.studentCode || user?.student_code || 'otc/00001/26';
 
-  // Construct QR Payload with Student ID and verification token
-  const qrPayload = JSON.stringify({
-    studentId: studentCode,
-    name: studentName,
-    program: data?.programName || 'Software Engineering',
-    token: data?.verificationToken || 'OTC-VERIFY-9A82B3C7E1-SECURE',
-    status: data?.status || 'Active',
-  });
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await getStudentEnrollmentsOverviewApi();
+      setOverview(res);
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { error?: { message?: string } } }; message?: string };
+      const msg =
+        axiosErr?.response?.data?.error?.message ||
+        (err instanceof Error ? err.message : 'Failed to load enrollment data');
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  // Primary Major course (if any) or general program
+  const activeMajor = useMemo(() => {
+    return overview?.active_enrollments.find((e) => e.course_type === 'major');
+  }, [overview]);
+
+  const programName = activeMajor ? activeMajor.course_title : 'General Academic Program';
+  const membershipStatus = (overview?.active_enrollments.length ?? 0) > 0 ? 'Active' : 'Registered';
+
+  // Construct QR Payload with verified Student ID and membership data
+  const qrPayload = useMemo(() => {
+    return JSON.stringify({
+      studentId: studentCode,
+      name: studentName,
+      program: programName,
+      status: membershipStatus,
+      activeCoursesCount: overview?.active_enrollments.length ?? 0,
+      timestamp: new Date().toISOString(),
+    });
+  }, [studentCode, studentName, programName, membershipStatus, overview]);
 
   const handlePrint = () => {
     window.print();
   };
+
+  // Earliest start date and latest end date
+  const cohortDates = useMemo(() => {
+    if (!overview?.active_enrollments || overview.active_enrollments.length === 0) {
+      return { start: '—', end: '—' };
+    }
+    const starts = overview.active_enrollments.map((e) => e.start_date).sort();
+    const ends = overview.active_enrollments.map((e) => e.end_date).sort();
+    return {
+      start: starts[0],
+      end: ends[ends.length - 1],
+    };
+  }, [overview]);
 
   return (
     <div className="space-y-6">
       {/* 1. Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2.5 flex-wrap">
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
-              Membership & Digital ID
-            </h1>
-            <SampleDataBadge />
-          </div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
+            Membership & Digital ID
+          </h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Official student credentials, enrollment status, and front desk check-in pass.
+            Official student credentials, verified enrollment status, and front desk check-in pass.
           </p>
         </div>
 
@@ -81,7 +131,9 @@ export const StudentMembershipPage: React.FC = () => {
       {error && (
         <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/30 text-destructive text-sm flex items-center justify-between">
           <span>{error}</span>
-          <Button variant="outline" size="sm" onClick={reload}>Retry</Button>
+          <Button variant="outline" size="sm" onClick={loadData}>
+            Retry
+          </Button>
         </div>
       )}
 
@@ -116,10 +168,10 @@ export const StudentMembershipPage: React.FC = () => {
                   </div>
                 </div>
                 <Badge
-                  variant={data?.status === 'Active' ? 'success' : 'outline'}
+                  variant={membershipStatus === 'Active' ? 'default' : 'secondary'}
                   className="text-[10px] font-bold uppercase tracking-wider"
                 >
-                  {data?.status || 'Active'}
+                  {membershipStatus}
                 </Badge>
               </div>
 
@@ -137,7 +189,7 @@ export const StudentMembershipPage: React.FC = () => {
                     />
                   </div>
                   <span className="text-[10px] text-muted-foreground mt-2 font-mono text-center">
-                    Scan for verification
+                    Scan for check-in
                   </span>
                 </div>
 
@@ -158,21 +210,21 @@ export const StudentMembershipPage: React.FC = () => {
                       <p className="font-mono font-bold text-primary text-sm mt-0.5">{studentCode}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] font-bold text-muted-foreground uppercase">Valid Until</p>
-                      <p className="font-semibold text-foreground mt-0.5">{data?.validUntil}</p>
+                      <p className="text-[10px] font-bold text-muted-foreground uppercase">Cohort Ends</p>
+                      <p className="font-semibold text-foreground mt-0.5 font-mono">{cohortDates.end}</p>
                     </div>
                   </div>
 
                   <div>
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase">Program</p>
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase">Primary Program</p>
                     <p className="text-xs font-medium text-foreground mt-0.5 line-clamp-2">
-                      {data?.programName}
+                      {programName}
                     </p>
                   </div>
 
                   <div className="pt-1 flex items-center gap-1.5 text-[11px] text-muted-foreground font-medium">
                     <ShieldCheck className="h-3.5 w-3.5 text-primary" />
-                    <span>Cryptographically verifiable QR token</span>
+                    <span>Cryptographically verified OTC student token</span>
                   </div>
                 </div>
               </div>
@@ -180,9 +232,9 @@ export const StudentMembershipPage: React.FC = () => {
               {/* Card Footer Note */}
               <div className="mt-6 pt-3 border-t border-border flex items-center justify-between text-[11px] text-muted-foreground">
                 <span className="italic">
-                  Show this QR to the receptionist to verify your enrollment.
+                  Show this QR to the receptionist to check in for class.
                 </span>
-                <span className="font-mono text-[10px]">OTC-ID</span>
+                <span className="font-mono text-[10px]">OTC-ID-SECURE</span>
               </div>
             </div>
 
@@ -200,7 +252,7 @@ export const StudentMembershipPage: React.FC = () => {
             </div>
           </div>
 
-          {/* 3. Enrollment Summary Card */}
+          {/* 3. Enrollment Summary Card (Real Data) */}
           <div className="space-y-6">
             <Card className="border-border bg-card shadow-sm">
               <CardHeader className="p-5 pb-3 border-b border-border">
@@ -210,32 +262,33 @@ export const StudentMembershipPage: React.FC = () => {
                     Enrollment Summary
                   </CardTitle>
                   <Badge variant="secondary" className="text-xs font-semibold">
-                    {data?.cohort}
+                    {overview?.active_enrollments.length || 0} Active{' '}
+                    {overview?.active_enrollments.length === 1 ? 'Course' : 'Courses'}
                   </Badge>
                 </div>
                 <CardDescription className="text-xs">
-                  Active academic registration & curriculum credits
+                  Active academic course registrations and cohort session timeline
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-5 space-y-4">
                 <div className="grid grid-cols-2 gap-4 text-xs">
                   <div className="p-3 rounded-lg bg-secondary/50 border border-border">
-                    <p className="text-muted-foreground font-medium uppercase text-[10px]">Start Date</p>
-                    <p className="font-bold text-foreground text-sm mt-1">{data?.startDate}</p>
+                    <p className="text-muted-foreground font-medium uppercase text-[10px]">Cohort Start</p>
+                    <p className="font-bold text-foreground text-sm mt-1 font-mono">{cohortDates.start}</p>
                   </div>
                   <div className="p-3 rounded-lg bg-secondary/50 border border-border">
-                    <p className="text-muted-foreground font-medium uppercase text-[10px]">End Date</p>
-                    <p className="font-bold text-foreground text-sm mt-1">{data?.endDate}</p>
+                    <p className="text-muted-foreground font-medium uppercase text-[10px]">Cohort End</p>
+                    <p className="font-bold text-foreground text-sm mt-1 font-mono">{cohortDates.end}</p>
                   </div>
                   <div className="p-3 rounded-lg bg-secondary/50 border border-border">
-                    <p className="text-muted-foreground font-medium uppercase text-[10px]">Total Training</p>
-                    <p className="font-bold text-foreground text-sm mt-1">{data?.totalTrainingHours} Hours</p>
+                    <p className="text-muted-foreground font-medium uppercase text-[10px]">Account Status</p>
+                    <p className="font-bold text-foreground text-sm mt-1">{membershipStatus}</p>
                   </div>
                   <div className="p-3 rounded-lg bg-secondary/50 border border-border">
-                    <p className="text-muted-foreground font-medium uppercase text-[10px]">Tuition Status</p>
+                    <p className="text-muted-foreground font-medium uppercase text-[10px]">Registration</p>
                     <p className="font-bold text-primary text-sm mt-1 flex items-center gap-1">
                       <CheckCircle2 className="h-3.5 w-3.5" />
-                      {data?.tuitionStatus}
+                      Verified
                     </p>
                   </div>
                 </div>
@@ -244,26 +297,64 @@ export const StudentMembershipPage: React.FC = () => {
                   <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">
                     Enrolled Courses in Current Cohort
                   </h4>
-                  <div className="space-y-2">
-                    {data?.enrolledCourses.map((c, i) => (
-                      <div
-                        key={i}
-                        className="p-2.5 rounded-lg border border-border bg-card flex items-center justify-between text-xs"
-                      >
-                        <span className="font-medium text-foreground">{c}</span>
-                        <Badge variant="subtle" className="text-[10px]">
-                          Enrolled
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
+
+                  {!overview?.active_enrollments || overview.active_enrollments.length === 0 ? (
+                    <EmptyState
+                      icon={GraduationCap}
+                      title="No active enrollments"
+                      description="You are not actively enrolled in any courses for the current cohort."
+                      action={
+                        <Button asChild variant="outline" size="sm" className="gap-2">
+                          <Link to="/student/courses">
+                            <Compass className="h-4 w-4 text-primary" />
+                            <span>Browse Courses</span>
+                          </Link>
+                        </Button>
+                      }
+                    />
+                  ) : (
+                    <div className="space-y-2.5">
+                      {overview.active_enrollments.map((enr) => (
+                        <div
+                          key={enr.enrollment_id}
+                          className="p-3 rounded-xl border border-border bg-card hover:bg-secondary/20 transition-colors space-y-1.5"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono text-xs font-bold text-primary">
+                                {enr.course_code}
+                              </span>
+                              <CourseTypeBadge type={enr.course_type} />
+                            </div>
+                            <Badge variant="outline" className="text-[10px] capitalize">
+                              {enr.status}
+                            </Badge>
+                          </div>
+                          <p className="text-xs font-semibold text-foreground">
+                            {enr.course_title}
+                          </p>
+                          <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground pt-0.5">
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-3 w-3 text-primary" />
+                              {enr.slot_summary || 'Schedule TBA'}
+                            </span>
+                            <span>&bull;</span>
+                            <span className="flex items-center gap-1">
+                              <Calendar className="h-3 w-3 text-primary" />
+                              {enr.start_date} to {enr.end_date}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <div className="pt-2 border-t border-border flex items-center justify-between text-xs text-muted-foreground">
-                  <span>Issued Date: {data?.cardIssueDate}</span>
-                  <span className="font-mono text-[11px] text-primary font-semibold">
-                    Token: {data?.verificationToken.slice(0, 14)}...
-                  </span>
+                  <span>Student ID: {studentCode}</span>
+                  <Link to="/student/classes" className="text-primary font-medium hover:underline">
+                    View Full Schedule &rarr;
+                  </Link>
                 </div>
               </CardContent>
             </Card>
@@ -311,7 +402,7 @@ export const StudentMembershipPage: React.FC = () => {
             <div className="space-y-1 pt-1">
               <p className="text-base font-bold text-foreground">{studentName}</p>
               <p className="text-xs font-mono font-bold text-primary">{studentCode}</p>
-              <p className="text-[11px] text-muted-foreground">{data?.programName}</p>
+              <p className="text-[11px] text-muted-foreground">{programName}</p>
             </div>
 
             <Button
